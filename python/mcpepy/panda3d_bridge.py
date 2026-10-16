@@ -31,8 +31,8 @@ def _panda():
     try:
         from panda3d.core import (
             AmbientLight, DirectionalLight, Fog, Geom, GeomNode,
-            GeomTriangles, GeomVertexData, GeomVertexFormat,
-            GeomVertexWriter, Texture, Vec4,
+            GeomTriangles, GeomVertexArrayFormat, GeomVertexData,
+            GeomVertexFormat, GeomVertexWriter, InternalName, Texture, Vec4,
         )
     except ImportError as exc:
         raise RuntimeError(
@@ -42,8 +42,9 @@ def _panda():
     return {
         "AmbientLight": AmbientLight, "DirectionalLight": DirectionalLight,
         "Fog": Fog, "Geom": Geom, "GeomNode": GeomNode,
-        "GeomTriangles": GeomTriangles, "GeomVertexData": GeomVertexData,
-        "GeomVertexFormat": GeomVertexFormat, "GeomVertexWriter": GeomVertexWriter,
+        "GeomTriangles": GeomTriangles, "GeomVertexArrayFormat": GeomVertexArrayFormat,
+        "GeomVertexData": GeomVertexData, "GeomVertexFormat": GeomVertexFormat,
+        "GeomVertexWriter": GeomVertexWriter, "InternalName": InternalName,
         "Texture": Texture, "Vec4": Vec4,
     }
 

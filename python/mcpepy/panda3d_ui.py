@@ -112,7 +112,9 @@ class Panda3DUI:
         item = self._gui["Slider"](
             parent=self.base.aspect2d, pos=(x, 0, z - 0.04),
             value=value, range=(minimum, maximum), pageSize=(maximum-minimum)/20,
-            command=command, scale=0.55)
+            # DirectSlider's command callback has no positional value argument;
+            # read the live value from the slider object instead.
+            command=lambda: command(item["value"]), scale=0.55)
         self.widgets.append(item)
         return item
 

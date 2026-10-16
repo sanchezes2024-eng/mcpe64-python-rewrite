@@ -24,6 +24,21 @@ class Panda3DAdapterTests(unittest.TestCase):
         self.assertEqual(TERRAIN_TILES[3]["all"], (1, 0))
         self.assertEqual(TERRAIN_TILES[4]["all"], (1, 1))
 
+    def test_renderer_uses_a_portable_custom_vertex_format(self):
+        from pathlib import Path
+        source = (Path(__file__).resolve().parents[1] / "mcpepy" /
+                  "panda3d_bridge.py").read_text()
+        self.assertIn("GeomVertexArrayFormat", source)
+        self.assertIn("InternalName.getTexcoord()", source)
+        self.assertIn("InternalName.getColor()", source)
+        self.assertNotIn("getV3t2c4()", source)
+
+    def test_slider_reads_value_from_directslider_instance(self):
+        from pathlib import Path
+        source = (Path(__file__).resolve().parents[1] / "mcpepy" /
+                  "panda3d_ui.py").read_text()
+        self.assertIn('command=lambda: command(item["value"])', source)
+
     def test_atlas_uvs_stay_inside_selected_tile(self):
         u, v = Panda3DRenderBridge._atlas_uv(1, "top", (0.5, 0.5))
         self.assertGreater(u, 0 / 16)
