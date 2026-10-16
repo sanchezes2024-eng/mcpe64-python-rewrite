@@ -33,6 +33,7 @@ def _panda():
             AmbientLight, DirectionalLight, Fog, Geom, GeomNode,
             GeomTriangles, GeomVertexArrayFormat, GeomVertexData,
             GeomVertexFormat, GeomVertexWriter, InternalName, Texture, Vec4,
+            WindowProperties,
         )
     except ImportError as exc:
         raise RuntimeError(
@@ -45,15 +46,13 @@ def _panda():
         "GeomTriangles": GeomTriangles, "GeomVertexArrayFormat": GeomVertexArrayFormat,
         "GeomVertexData": GeomVertexData, "GeomVertexFormat": GeomVertexFormat,
         "GeomVertexWriter": GeomVertexWriter, "InternalName": InternalName,
-        "Texture": Texture, "Vec4": Vec4,
+        "Texture": Texture, "Vec4": Vec4, "WindowProperties": WindowProperties,
     }
 
 
 class Panda3DRenderBridge:
     """Build a batched textured GeomNode from the world's exposed voxel faces."""
 
-    # Subtle face shading preserves the original pixel art instead of replacing
-    # it with the flat placeholder colors used by the first bridge iteration.
     FACE_LIGHT = {
         "top": 1.0, "bottom": 0.52, "east": 0.82,
         "west": 0.82, "north": 0.72, "south": 0.72,
@@ -69,7 +68,6 @@ class Panda3DRenderBridge:
         self.rebuild_world()
 
     def _load_terrain_texture(self):
-        """Load the real terrain atlas; keep a clear fallback if it is absent."""
         path = ASSET_ROOT / "terrain.png"
         if not path.is_file():
             return None
@@ -82,9 +80,6 @@ class Panda3DRenderBridge:
                 texture.setWrapV(self._p["Texture"].WMBorderColor)
             return texture
         except Exception:
-            # The renderer remains launchable when assets are missing or a
-            # graphics backend cannot decode them; the repository path is
-            # reported through has_terrain_texture for diagnostics.
             return None
 
     @property
@@ -113,8 +108,6 @@ class Panda3DRenderBridge:
         if tile is None:
             return float(uv[0]), float(uv[1])
         col, row = tile
-        # A half-texel inset prevents adjacent atlas tiles bleeding together
-        # when a window is resized. V is inverted because atlas rows count down.
         inset = 0.5 / 256.0
         u0, u1 = col / 16.0 + inset, (col + 1) / 16.0 - inset
         v0, v1 = 1.0 - (row + 1) / 16.0 + inset, 1.0 - row / 16.0 - inset
@@ -126,8 +119,8 @@ class Panda3DRenderBridge:
         if self.node_path is not None:
             self.node_path.removeNode()
 
-        # Use an explicit vertex layout: some Panda3D builds do not expose
-        # the convenience getV3t2c4() format.
+        # Explicit registered format works across Panda3D builds that lack
+        # the getV3t2c4() convenience format.
         array = p["GeomVertexArrayFormat"]()
         array.addColumn(p["InternalName"].getVertex(), 3,
                         p["Geom"].NTFloat32, p["Geom"].CPoint)
@@ -168,7 +161,6 @@ class Panda3DRenderBridge:
         if self.texture is not None:
             self.node_path.setTexture(self.texture, 1)
         else:
-            # Textures are preferred, but missing assets should not crash.
             self.node_path.setColor(0.65, 0.65, 0.65, 1.0)
         self.triangle_count = len(faces) * 2
         return self.node_path
@@ -195,7 +187,9 @@ class Panda3DRenderBridge:
 
 
 class Panda3DGameAdapter:
-    """Run the existing Python Game model through Panda3D."""
+    """Run the Python Game model through Panda3D with classic FPS mouse look."""
+
+    MOUSE_SENSITIVITY = 0.0025
 
     def __init__(self, base: Any, seed: int = 7):
         from .game import Game
@@ -207,16 +201,68 @@ class Panda3DGameAdapter:
         base.setBackgroundColor(0.45, 0.68, 0.88, 1)
         base.camLens.setFov(70)
         self._keys = set()
+        self._mouse_locked = False
         self._bind_inputs()
         self._sync_camera()
         self.base.taskMgr.add(self._tick, "mcpe-python-game-tick")
 
+    @property
+    def mouse_locked(self):
+        return self._mouse_locked
+
     def _bind_inputs(self):
-        for key in ("w", "a", "s", "d", "space", "shift", "arrow_left",
-                    "arrow_right", "arrow_up", "arrow_down"):
+        # Shift is sneak in the original keyboard input mapping, not sprint.
+        for key in ("w", "a", "s", "d", "space", "shift"):
             self.base.accept(key, self._keys.add, [key])
             self.base.accept(key + "-up", self._keys.discard, [key])
-        self.base.accept("escape", self.base.userExit)
+        self.base.accept("mouse1", self.lock_mouse)
+        self.base.accept("escape", self.unlock_mouse)
+        self.base.accept("window-event", self._on_window_event)
+
+    def _on_window_event(self, window):
+        if window is not None and not window.getProperties().getForeground():
+            self.unlock_mouse()
+
+    def lock_mouse(self):
+        """Hide and recenter the cursor; click the game view to capture it."""
+        if self._mouse_locked or self.base.win is None:
+            return
+        props = self._panda_window_properties()
+        props.setCursorHidden(True)
+        self.base.win.requestProperties(props)
+        self._mouse_locked = True
+        self._center_pointer()
+
+    def unlock_mouse(self):
+        """Release the pointer with Escape so menus/desktop remain accessible."""
+        if not self._mouse_locked:
+            return
+        self._mouse_locked = False
+        props = self._panda_window_properties()
+        props.setCursorHidden(False)
+        self.base.win.requestProperties(props)
+        self._keys.clear()
+
+    def _panda_window_properties(self):
+        return self.bridge._p["WindowProperties"]()
+
+    def _center_pointer(self):
+        if self.base.win is None:
+            return
+        width, height = self.base.win.getXSize(), self.base.win.getYSize()
+        if width > 0 and height > 0:
+            self.base.win.movePointer(0, width // 2, height // 2)
+
+    def _read_mouse_delta(self):
+        if not self._mouse_locked or self.base.win is None:
+            return 0.0, 0.0
+        pointer = self.base.win.getPointer(0)
+        width, height = self.base.win.getXSize(), self.base.win.getYSize()
+        cx, cy = width // 2, height // 2
+        dx, dy = pointer.getX() - cx, pointer.getY() - cy
+        if dx or dy:
+            self.base.win.movePointer(0, cx, cy)
+        return float(dx), float(dy)
 
     def _sync_camera(self):
         camera = self.base.camera
@@ -228,10 +274,14 @@ class Panda3DGameAdapter:
 
     def _tick(self, task):
         dt = min(max(task.dt, 0.0), 0.05)
-        look_x = (1 if "arrow_right" in self._keys else 0) - (
-            1 if "arrow_left" in self._keys else 0)
-        look_y = (1 if "arrow_down" in self._keys else 0) - (
-            1 if "arrow_up" in self._keys else 0)
-        self.game.step(self._keys, dt, look_x=look_x * 1.8, look_y=look_y * 1.4)
+        dx, dy = self._read_mouse_delta()
+        # Mouse movement is a per-frame delta, unlike the game step's
+        # radians-per-second look input.
+        look_x = dx * self.MOUSE_SENSITIVITY / max(dt, 1e-6)
+        look_y = -dy * self.MOUSE_SENSITIVITY / max(dt, 1e-6)
+        if not self._mouse_locked:
+            look_x = 0.0
+            look_y = 0.0
+        self.game.step(self._keys, dt, look_x=look_x, look_y=look_y)
         self._sync_camera()
         return task.cont
