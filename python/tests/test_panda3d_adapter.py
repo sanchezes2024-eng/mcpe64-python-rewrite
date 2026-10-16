@@ -1,0 +1,22 @@
+"""Smoke tests for the optional Panda3D adapter without requiring Panda3D."""
+import unittest
+
+from mcpepy.panda3d_bridge import Panda3DRenderBridge
+from mcpepy.panda3d_ui import MCPE061Screens, Panda3DUI
+
+
+class Panda3DAdapterTests(unittest.TestCase):
+    def test_optional_modules_import_without_panda3d_installed(self):
+        self.assertTrue(callable(Panda3DRenderBridge))
+        self.assertTrue(callable(Panda3DUI))
+        self.assertTrue(callable(MCPE061Screens))
+
+    def test_world_vertex_coordinates_convert_from_y_up_to_z_up(self):
+        class Vertex:
+            x, y, z = 2, 3, 5
+
+        self.assertEqual(Panda3DRenderBridge._to_panda(Vertex()), (2.0, 5.0, 3.0))
+
+
+if __name__ == "__main__":
+    unittest.main()
