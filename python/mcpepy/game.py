@@ -42,12 +42,12 @@ class Game:
 
     def jump(self):
         if self.grounded:
-            self.vertical_speed=13.0
+            self.vertical_speed=8.0
             self.grounded=False
 
     def step(self, keys=(), dt=1/30, look_x=0.0, look_y=0.0):
         """Advance a simulation frame. Keys are lowercase names like 'w','space'."""
-        dt=max(0.0,min(float(dt),.05))
+        dt=max(0.0,float(dt))
         keys=set(keys)
         self.yaw += float(look_x)*dt
         self.pitch=max(-1.5533,min(1.5533,self.pitch+float(look_y)*dt))
@@ -62,8 +62,8 @@ class Game:
         if length>0:
             mx,mz=mx/length,mz/length
         # Native KeyboardInput scales movement input to 0.3 while sneaking.
-        speed=9.0*(0.3 if "shift" in keys else 1.0)
-        self.vertical_speed-=55.0*dt
+        speed=4.3*(0.3 if "shift" in keys else 1.0)
+        self.vertical_speed-=32.0*dt
         result=move_and_collide(self.world,self.player_bounds(),mx*speed*dt,
                                 self.vertical_speed*dt,mz*speed*dt)
         self.player_x=(result.bounds.min_x+result.bounds.max_x)*.5
