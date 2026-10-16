@@ -10,6 +10,7 @@ This directory is the start of an independently implemented Python client/engine
 - Voxel chunk storage and visible-face extraction
 - Sparse world/chunk manager with negative world-coordinate support
 - Deterministic rolling terrain prototype
+- Basic AABB collision detection and axis-separated movement prototype
 - Unit tests for math, framebuffer, renderer, voxel storage, world coordinates, and terrain
 
 ## Run the tests
@@ -27,4 +28,4 @@ PYTHONPATH=. python3 -m unittest discover -s tests -p "test_voxel.py" -v
 PYTHONPATH=. python3 -m unittest discover -s tests -p "test_world.py" -v
 ```
 
-The renderer and terrain are prototypes, not completed MCPE 0.6.1 implementations. Follow-up work includes proper clipping, texture sampling, perspective-correct interpolation, lighting/fog, chunk meshing and batching, gameplay physics, assets, UI, audio, persistence, and reference-based validation. Terrain generation is deliberately original and is not claimed to reproduce the original game's algorithm.
+The renderer and terrain are prototypes, not completed MCPE 0.6.1 implementations. Follow-up work includes proper clipping, texture sampling, perspective-correct interpolation, lighting/fog, chunk meshing and batching, player controller, friction/acceleration tuning, step-up behavior, assets, UI, audio, persistence, and reference-based validation. Terrain generation is deliberately original and is not claimed to reproduce the original game's algorithm.
