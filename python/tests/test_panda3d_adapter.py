@@ -38,6 +38,15 @@ class Panda3DAdapterTests(unittest.TestCase):
                   "panda3d_ui.py").read_text()
         self.assertIn('command=lambda: command(item["value"])', source)
 
+    def test_mouse_look_uses_capture_and_escape_releases_pointer(self):
+        from pathlib import Path
+        source = (Path(__file__).resolve().parents[1] / "mcpepy" /
+                  "panda3d_bridge.py").read_text()
+        self.assertIn('self.base.accept("mouse1", self.lock_mouse)', source)
+        self.assertIn('self.base.accept("escape", self.unlock_mouse)', source)
+        self.assertIn("setCursorHidden(True)", source)
+        self.assertIn("movePointer(0, cx, cy)", source)
+
     def test_atlas_uvs_stay_inside_selected_tile(self):
         u, v = Panda3DRenderBridge._atlas_uv(1, "top", (0.5, 0.5))
         self.assertGreater(u, 0 / 16)
