@@ -61,7 +61,7 @@ class Game:
         length=(mx*mx+mz*mz)**.5
         if length>0:
             mx,mz=mx/length,mz/length
-        speed=4.3*(1.7 if "shift" in keys else 1.0)
+        # Native KeyboardInput scales movement input to 0.3 while sneaking.\n        speed=4.3*(0.3 if "shift" in keys else 1.0)
         self.vertical_speed-=18.0*dt
         result=move_and_collide(self.world,self.player_bounds(),mx*speed*dt,
                                 self.vertical_speed*dt,mz*speed*dt)
