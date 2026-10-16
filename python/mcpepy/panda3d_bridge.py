@@ -76,10 +76,10 @@ class Panda3DRenderBridge:
             self.node_path.removeNode()
 
         fmt = p["GeomVertexFormat"].getV3c4()
-        data = p["GeomVertexData"]("mcpe-world", fmt, p["Geom.UHStatic"])
+        data = p["GeomVertexData"]("mcpe-world", fmt, p["Geom"].UHStatic)
         vertices = p["GeomVertexWriter"](data, "vertex")
         colors = p["GeomVertexWriter"](data, "color")
-        tris = p["GeomTriangles"](p["Geom.UHStatic"])
+        tris = p["GeomTriangles"](p["Geom"].UHStatic)
         faces = build_world_mesh(self.world).faces
         index = 0
         for face in faces:
