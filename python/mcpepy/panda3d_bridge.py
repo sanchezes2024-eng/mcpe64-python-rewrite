@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .chunkmesh import build_world_mesh
-from .voxel import BEDROCK, DIRT, GRASS, STONE
+from .voxel import AIR, BEDROCK, DIRT, GRASS, STONE
 from .world import World
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -215,9 +215,93 @@ class Panda3DGameAdapter:
         for key in ("w", "a", "s", "d", "space", "shift"):
             self.base.accept(key, self._keys.add, [key])
             self.base.accept(key + "-up", self._keys.discard, [key])
-        self.base.accept("mouse1", self.lock_mouse)
+        # First left click captures the pointer. Once captured, left click
+        # mines and right click places, like the original PC-style controls.
+        self.base.accept("mouse1", self._left_click)
+        self.base.accept("mouse3", self._right_click)
         self.base.accept("escape", self.unlock_mouse)
         self.base.accept("window-event", self._on_window_event)
+
+    def _left_click(self):
+        if not self._mouse_locked:
+            self.lock_mouse()
+            return
+        self.break_targeted_block()
+
+    def _right_click(self):
+        if self._mouse_locked:
+            self.place_targeted_block()
+
+    def _target_block(self, reach: float = 5.0):
+        """Voxel raycast from the camera; return (hit cell, previous air cell)."""
+        camera = self.base.camera
+        forward = camera.getQuat(self.base.render).getForward()
+        # Panda coordinates are (world X, world Z, world Y).
+        origin = (self.game.player_x, self.game.player_y + 1.55, self.game.player_z)
+        direction = (float(forward.x), float(forward.z), float(forward.y))
+        length = sum(v * v for v in direction) ** 0.5
+        if length < 1e-9:
+            return None
+        direction = tuple(v / length for v in direction)
+        from math import floor
+        cell = [int(floor(v)) for v in origin]
+        step = [1 if v > 0 else (-1 if v < 0 else 0) for v in direction]
+        t_delta = [abs(1.0 / v) if abs(v) > 1e-9 else float("inf") for v in direction]
+        t_max = []
+        for axis in range(3):
+            if step[axis] > 0:
+                t_max.append((cell[axis] + 1 - origin[axis]) / direction[axis])
+            elif step[axis] < 0:
+                t_max.append((origin[axis] - cell[axis]) / -direction[axis])
+            else:
+                t_max.append(float("inf"))
+        previous_air = None
+        distance = 0.0
+        while distance <= reach:
+            x, y, z = cell
+            try:
+                block = self.game.world.get_block(x, y, z)
+            except IndexError:
+                block = AIR
+            if block != AIR:
+                return (tuple(cell), previous_air)
+            previous_air = tuple(cell)
+            axis = min(range(3), key=lambda i: t_max[i])
+            distance = t_max[axis]
+            cell[axis] += step[axis]
+            t_max[axis] += t_delta[axis]
+        return None
+
+    def break_targeted_block(self):
+        target = self._target_block()
+        if target is None:
+            return False
+        (x, y, z), _ = target
+        if y < 0 or y >= self.game.world.chunk_height:
+            return False
+        self.game.world.set_block(x, y, z, AIR)
+        self.bridge.rebuild_world()
+        return True
+
+    def place_targeted_block(self):
+        target = self._target_block()
+        if target is None:
+            return False
+        (x, y, z), air_cell = target
+        if air_cell is None:
+            return False
+        ax, ay, az = air_cell
+        if ay < 0 or ay >= self.game.world.chunk_height:
+            return False
+        # Do not let placement put a block inside the player's collision box.
+        player = self.game.player_bounds()
+        if (player.min_x < ax + 1 and player.max_x > ax
+                and player.min_y < ay + 1 and player.max_y > ay
+                and player.min_z < az + 1 and player.max_z > az):
+            return False
+        self.game.world.set_block(ax, ay, az, DIRT)
+        self.bridge.rebuild_world()
+        return True
 
     def _on_window_event(self, window):
         if window is not None and not window.getProperties().getForeground():
@@ -277,7 +361,9 @@ class Panda3DGameAdapter:
         dx, dy = self._read_mouse_delta()
         # Mouse movement is a per-frame delta, unlike the game step's
         # radians-per-second look input.
-        look_x = dx * self.MOUSE_SENSITIVITY / max(dt, 1e-6)
+        # Panda's positive horizontal pointer delta is opposite to the
+        # native MCPE yaw convention used by Game.step().
+        look_x = -dx * self.MOUSE_SENSITIVITY / max(dt, 1e-6)
         look_y = -dy * self.MOUSE_SENSITIVITY / max(dt, 1e-6)
         if not self._mouse_locked:
             look_x = 0.0
