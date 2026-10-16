@@ -1,7 +1,7 @@
 """Smoke tests for the optional Panda3D adapter without requiring Panda3D."""
 import unittest
 
-from mcpepy.panda3d_bridge import Panda3DRenderBridge
+from mcpepy.panda3d_bridge import Panda3DRenderBridge, TERRAIN_TILES
 from mcpepy.panda3d_ui import MCPE061Screens, Panda3DUI
 
 
@@ -16,6 +16,20 @@ class Panda3DAdapterTests(unittest.TestCase):
             x, y, z = 2, 3, 5
 
         self.assertEqual(Panda3DRenderBridge._to_panda(Vertex()), (2.0, 5.0, 3.0))
+
+    def test_original_terrain_atlas_tiles_are_defined_for_supported_blocks(self):
+        self.assertEqual(TERRAIN_TILES[1]["top"], (0, 0))
+        self.assertEqual(TERRAIN_TILES[1]["side"], (3, 0))
+        self.assertEqual(TERRAIN_TILES[2]["all"], (2, 0))
+        self.assertEqual(TERRAIN_TILES[3]["all"], (1, 0))
+        self.assertEqual(TERRAIN_TILES[4]["all"], (1, 1))
+
+    def test_atlas_uvs_stay_inside_selected_tile(self):
+        u, v = Panda3DRenderBridge._atlas_uv(1, "top", (0.5, 0.5))
+        self.assertGreater(u, 0 / 16)
+        self.assertLess(u, 1 / 16)
+        self.assertGreater(v, 15 / 16)
+        self.assertLess(v, 1.0)
 
 
 if __name__ == "__main__":

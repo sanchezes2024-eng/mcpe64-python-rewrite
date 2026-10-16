@@ -1,9 +1,4 @@
-"""Clean-room MCPE-style UI adapter backed by Panda3D DirectGUI.
-
-The adapter maps reusable screen/widget concepts to Panda3D. Screen-specific
-behavior is intentionally data-driven; the native C++ UI is not source-translated
-or silently replaced by this first migration layer.
-"""
+"""Clean-room MCPE-style UI adapter using the repository's original GUI images."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -32,7 +27,7 @@ def _directgui():
 
 
 class Panda3DUI:
-    """Small DirectGUI compatibility surface for classic-game UI components."""
+    """Small DirectGUI surface with original MCPE background/logo assets."""
 
     def __init__(self, base: Any):
         self.base = base
@@ -45,9 +40,7 @@ class Panda3DUI:
         for widget in self.widgets:
             widget.destroy()
         self.widgets.clear()
-        if self.background is not None:
-            self.background.destroy()
-            self.background = None
+        self.background = None
 
     def begin_screen(self, name: str, *, title: str | None = None,
                      use_background: bool = True):
@@ -56,13 +49,22 @@ class Panda3DUI:
         if use_background:
             bg = GUI_ASSETS / "background.png"
             if bg.is_file():
+                # This is the game's own pixel-art menu background, not a
+                # generated solid-color panel. Keep nearest-neighbor sampling.
+                texture = self.base.loader.loadTexture(str(bg))
+                if texture is not None:
+                    from panda3d.core import Texture
+                    texture.setMinfilter(Texture.FTNearest)
+                    texture.setMagfilter(Texture.FTNearest)
                 self.background = self._gui["Frame"](
-                    parent=self.base.aspect2d, frameSize=(-1.78, 1.78, -1, 1),
-                    frameColor=(1, 1, 1, 1), image=str(bg),
+                    parent=self.base.aspect2d,
+                    frameSize=(-1.78, 1.78, -1, 1),
+                    frameColor=(1, 1, 1, 1), image=texture or str(bg),
                     image_scale=(3.56, 1, 2.0), image_pos=(0, 0, 0))
+                self.background.setBin("background", 0)
                 self.widgets.append(self.background)
         if title:
-            self.label(title, 0, 0.62, scale=0.095)
+            self.label(title, 0, 0.66, scale=0.085)
         return self
 
     def label(self, text: str, x: float, z: float, *, scale: float = 0.06,
@@ -80,7 +82,7 @@ class Panda3DUI:
             parent=self.base.aspect2d, text=text, pos=(x, 0, z),
             scale=0.06, command=command, text_scale=0.9,
             frameSize=(-width, width, -0.42, 0.42),
-            frameColor=(0.28, 0.28, 0.28, 0.96),
+            frameColor=(0.18, 0.18, 0.18, 0.96),
             relief=1, text_fg=(1, 1, 1, 1),
             pressEffect=True)
         self.widgets.append(item)
@@ -118,16 +120,22 @@ class Panda3DUI:
         path = GUI_ASSETS / filename
         if not path.is_file():
             return None
+        texture = self.base.loader.loadTexture(str(path))
+        if texture is not None:
+            from panda3d.core import Texture
+            texture.setMinfilter(Texture.FTNearest)
+            texture.setMagfilter(Texture.FTNearest)
         item = self._gui["Frame"](
             parent=self.base.aspect2d, frameSize=(-scale, scale, -scale, scale),
-            frameColor=(1, 1, 1, 1), image=str(path),
+            frameColor=(1, 1, 1, 1), image=texture or str(path),
             image_scale=(2 * scale, 1, 2 * scale), pos=(x, 0, z))
+        item.setTransparency(True)
         self.widgets.append(item)
         return item
 
 
 class MCPE061Screens:
-    """Initial screen-flow mapping for the Python/Panda3D migration."""
+    """Initial screen flow with original MCPE title and background images."""
 
     def __init__(self, base: Any, start_game: Callable[[], Any]):
         self.base = base
@@ -138,15 +146,18 @@ class MCPE061Screens:
         self.ui_main_menu()
 
     def ui_main_menu(self):
-        self.ui.begin_screen("main_menu", title="Minecraft: Pocket Edition")
-        self.ui.image("title.png", 0, 0.34, 0.46)
-        self.ui.button("Singleplayer", 0, 0.03, self.ui_world_select)
-        self.ui.button("Options", 0, -0.12, self.ui_options)
-        self.ui.button("Quit", 0, -0.27, self.base.userExit)
+        # The title.png already contains the original logo; don't print a
+        # second, unrelated text title over it.
+        self.ui.begin_screen("main_menu", use_background=True)
+        self.ui.image("title.png", 0, 0.43, 0.60)
+        self.ui.button("Singleplayer", 0, 0.02, self.ui_world_select)
+        self.ui.button("Options", 0, -0.13, self.ui_options)
+        self.ui.button("Quit", 0, -0.28, self.base.userExit)
 
     def ui_world_select(self):
         self.ui.begin_screen("world_select", title="Select World")
-        self.ui.label("World selection is a migration stub.", 0, 0.34, scale=0.05)
+        self.ui.image("default_world.png", -0.9, 0.18, 0.16)
+        self.ui.label("Choose a world", 0, 0.34, scale=0.05)
         self.ui.button("Create New World", 0, 0.12, self.ui_create_world)
         self.ui.button("Play test terrain", 0, -0.04, self.start_game)
         self.ui.button("Back", 0, -0.25, self.ui_main_menu)
@@ -168,7 +179,7 @@ class MCPE061Screens:
 
     def ui_options(self):
         self.ui.begin_screen("options", title="Options")
-        self.ui.label("Panda3D UI adapter settings", 0, 0.35, scale=0.05)
+        self.ui.label("Field of view", 0, 0.35, scale=0.05)
         self.ui.slider("Field of view", 0, 0.12,
                        lambda value: self.base.camLens.setFov(55 + value * 45),
                        value=1/3)
