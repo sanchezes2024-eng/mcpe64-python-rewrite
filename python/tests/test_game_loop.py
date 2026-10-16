@@ -26,6 +26,11 @@ class GameLoopTests(unittest.TestCase):
         ppm=game.render()
         self.assertTrue(ppm.startswith(b"P6"))
         self.assertGreater(game.last_triangles,0)
+        # The default first-person view must show terrain, not only the sky.
+        sky = bytes((116, 174, 224))
+        visible = sum(1 for i in range(0, len(game.renderer.framebuffer.color), 3)
+                      if tuple(game.renderer.framebuffer.color[i:i+3]) != sky)
+        self.assertGreater(visible, 0)
 
     def test_step_updates_player_and_camera(self):
         game=Game(48,36,seed=1)

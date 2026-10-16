@@ -23,7 +23,7 @@ class Game:
     vertical_speed: float = field(init=False, default=0.0)
     grounded: bool = field(init=False, default=False)
     yaw: float = field(init=False, default=0.0)
-    pitch: float = field(init=False, default=-0.12)
+    pitch: float = field(init=False, default=-0.38)
     last_triangles: int = field(init=False, default=0)
 
     def __post_init__(self):
