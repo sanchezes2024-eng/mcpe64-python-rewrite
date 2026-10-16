@@ -1,0 +1,2 @@
+# Optional desktop 3D backend; the core unit tests remain dependency-free.
+panda3d>=1.10.15
