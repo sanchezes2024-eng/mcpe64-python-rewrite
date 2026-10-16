@@ -1,31 +1,28 @@
 # Python rewrite workspace
 
-This directory is the start of an independently implemented Python client/engine. It is intentionally separate from the original native build until individual Python systems have tests and are ready to replace their counterparts.
+This is a dependency-free Python engine prototype kept separate from the native build while replacements are tested. The original native source tree remains unchanged.
 
-## Current prototype systems
+## Implemented prototype systems
 
 - Standard-library-only 3D vector and matrix math
-- RGB framebuffer and depth buffer
-- CPU triangle rasterizer (with clipping and texture features still incomplete)
-- Voxel chunk storage and visible-face extraction
-- Sparse world/chunk manager with negative world-coordinate support
-- Deterministic rolling terrain prototype
-- Basic AABB collision detection and axis-separated movement prototype
-- Unit tests for math, framebuffer, renderer, voxel storage, world coordinates, and terrain
+- RGB framebuffer with depth testing and alpha blending
+- CPU triangle rasterizer with homogeneous frustum clipping
+- Perspective-correct UV interpolation for textured triangles
+- Texture sampling (nearest and bilinear) and PPM / uncompressed BMP loading
+- Multiplicative tint/lighting and an approximate depth-based fog option
+- Voxel chunk storage, visible-face extraction, sparse world/chunk manager
+- Deterministic rolling terrain prototype (not claimed to match the original generator)
+- Basic AABB collision and axis-separated movement
+- Unit tests for math, framebuffer, clipping, textures, voxels, world and collision
 
-## Run the tests
+## Run tests
 
-Run these commands from this `python` directory. Do not run a test file directly from `tests/`, because Python then may not include this parent directory on its import path.
+Run these commands from this directory:
 
 ```sh
 python3 -m unittest discover -s tests -v
 ```
 
-If you need to run one test file only:
+## Remaining phases
 
-```sh
-PYTHONPATH=. python3 -m unittest discover -s tests -p "test_voxel.py" -v
-PYTHONPATH=. python3 -m unittest discover -s tests -p "test_world.py" -v
-```
-
-The renderer and terrain are prototypes, not completed MCPE 0.6.1 implementations. Follow-up work includes proper clipping, texture sampling, perspective-correct interpolation, lighting/fog, chunk meshing and batching, player controller, friction/acceleration tuning, step-up behavior, assets, UI, audio, persistence, and reference-based validation. Terrain generation is deliberately original and is not claimed to reproduce the original game's algorithm.
+This is **not a finished game or faithful MCPE 0.6.1 port**. The renderer is a general software prototype and lighting/fog are approximate. Next phases include chunk mesh generation and integration, camera/input/game loop, player controller, blocks/items, persistence, entities, UI, audio, and platform packaging. Validate against source code the project is authorized to adapt or lawful behavioral references before replacing native counterparts. Do not remove native files until replacements are tested.
