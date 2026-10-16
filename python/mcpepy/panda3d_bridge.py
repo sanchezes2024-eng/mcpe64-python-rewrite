@@ -126,7 +126,18 @@ class Panda3DRenderBridge:
         if self.node_path is not None:
             self.node_path.removeNode()
 
-        fmt = p["GeomVertexFormat"].getV3t2c4()
+        # Use an explicit vertex layout: some Panda3D builds do not expose
+        # the convenience getV3t2c4() format.
+        array = p["GeomVertexArrayFormat"]()
+        array.addColumn(p["InternalName"].getVertex(), 3,
+                        p["Geom"].NTFloat32, p["Geom"].CPoint)
+        array.addColumn(p["InternalName"].getTexcoord(), 2,
+                        p["Geom"].NTFloat32, p["Geom"].CTexcoord)
+        array.addColumn(p["InternalName"].getColor(), 4,
+                        p["Geom"].NTFloat32, p["Geom"].CColor)
+        fmt = p["GeomVertexFormat"]()
+        fmt.addArray(array)
+        fmt = p["GeomVertexFormat"].registerFormat(fmt)
         data = p["GeomVertexData"]("mcpe-world", fmt, p["Geom"].UHStatic)
         vertices = p["GeomVertexWriter"](data, "vertex")
         texcoords = p["GeomVertexWriter"](data, "texcoord")
