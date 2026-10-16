@@ -32,6 +32,17 @@ class GameLoopTests(unittest.TestCase):
                       if tuple(game.renderer.framebuffer.color[i:i+3]) != sky)
         self.assertGreater(visible, 0)
 
+    def test_strafe_direction_matches_camera_right(self):
+        game=Game(48,36,seed=1)
+        before=game.player_x
+        game.step({"d"},dt=.05)
+        self.assertLess(game.player_x,before)
+
+    def test_gravity_accelerates_falling(self):
+        game=Game(48,36,seed=1)
+        game.step(set(),dt=.05)
+        self.assertAlmostEqual(game.vertical_speed,-1.6)
+
     def test_step_updates_player_and_camera(self):
         game=Game(48,36,seed=1)
         before=game.player_z
