@@ -2,18 +2,29 @@
 
 This directory is the start of an independently implemented Python client/engine. It is intentionally separate from the original native build until individual Python systems have tests and are ready to replace their counterparts.
 
-## Current part: renderer primitives
+## Current prototype systems
 
-- Standard-library-only 3D math
+- Standard-library-only 3D vector and matrix math
 - RGB framebuffer and depth buffer
-- Homogeneous transform and perspective projection
-- CPU triangle rasterizer with depth testing
-- Unit tests
+- CPU triangle rasterizer (with clipping and texture features still incomplete)
+- Voxel chunk storage and visible-face extraction
+- Sparse world/chunk manager with negative world-coordinate support
+- Deterministic rolling terrain prototype
+- Unit tests for math, framebuffer, renderer, voxel storage, world coordinates, and terrain
 
-Run tests from this directory:
+## Run the tests
+
+Run these commands from this `python` directory. Do not run a test file directly from `tests/`, because Python then may not include this parent directory on its import path.
 
 ```sh
-python -m unittest discover -s tests -v
+python3 -m unittest discover -s tests -v
 ```
 
-The renderer is a foundation, not a completed MCPE 0.6.1 renderer. The next stages must implement clipping, texture sampling, perspective-correct interpolation, original-era fog/blending/lighting semantics, chunk batching, and reference-based tests. A software renderer is portable but not expected to match GPU performance.
+If you need to run one test file only:
+
+```sh
+PYTHONPATH=. python3 -m unittest discover -s tests -p "test_voxel.py" -v
+PYTHONPATH=. python3 -m unittest discover -s tests -p "test_world.py" -v
+```
+
+The renderer and terrain are prototypes, not completed MCPE 0.6.1 implementations. Follow-up work includes proper clipping, texture sampling, perspective-correct interpolation, lighting/fog, chunk meshing and batching, gameplay physics, assets, UI, audio, persistence, and reference-based validation. Terrain generation is deliberately original and is not claimed to reproduce the original game's algorithm.
