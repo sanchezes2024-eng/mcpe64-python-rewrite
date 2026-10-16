@@ -18,7 +18,7 @@ def main():
         def __init__(self):
             super().__init__()
             self.disableMouse()
-            self.setWindowTitle("MCPE 0.6.1 Python/Panda3D Migration")
+            # Panda3D sets the title on its GraphicsWindow, not on ShowBase.\n            self.win.setTitle("MCPE 0.6.1 Python/Panda3D Migration")
             self.game_adapter = None
             self.screens = MCPE061Screens(self, self.start_game)
 
