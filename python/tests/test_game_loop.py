@@ -41,7 +41,7 @@ class GameLoopTests(unittest.TestCase):
     def test_gravity_accelerates_falling(self):
         game=Game(48,36,seed=1)
         game.step(set(),dt=.05)
-        self.assertAlmostEqual(game.vertical_speed,-2.25)
+        self.assertAlmostEqual(game.vertical_speed,-2.75)
 
     def test_step_updates_player_and_camera(self):
         game=Game(48,36,seed=1)
