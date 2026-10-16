@@ -21,6 +21,17 @@ class PhysicsTests(unittest.TestCase):
         self.assertTrue(result.collided_x)
         self.assertAlmostEqual(result.bounds.max_x, 1.0)
 
+    def test_axis_clipping_allows_sliding_along_a_wall(self):
+        world = World(4, 8, 4)
+        world.set_block(1, 1, 0, STONE)
+        result = move_and_collide(
+            world, AABB(0.1, 1, 0.1, 0.9, 2, 0.9), 1.0, 0.0, 0.5
+        )
+        self.assertTrue(result.collided_x)
+        self.assertFalse(result.collided_z)
+        self.assertAlmostEqual(result.bounds.max_x, 1.0)
+        self.assertAlmostEqual(result.bounds.min_z, 0.6)
+
     def test_floor_stops_downward_movement(self):
         world = World(4, 8, 4)
         world.set_block(0, 0, 0, STONE)
