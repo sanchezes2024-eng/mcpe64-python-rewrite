@@ -42,10 +42,14 @@ class Panda3DAdapterTests(unittest.TestCase):
         from pathlib import Path
         source = (Path(__file__).resolve().parents[1] / "mcpepy" /
                   "panda3d_bridge.py").read_text()
-        self.assertIn('self.base.accept("mouse1", self.lock_mouse)', source)
+        self.assertIn('self.base.accept("mouse1", self._left_click)', source)
+        self.assertIn('self.base.accept("mouse3", self._right_click)', source)
         self.assertIn('self.base.accept("escape", self.unlock_mouse)', source)
         self.assertIn("setCursorHidden(True)", source)
         self.assertIn("movePointer(0, cx, cy)", source)
+        self.assertIn("look_x = -dx * self.MOUSE_SENSITIVITY", source)
+        self.assertIn("def break_targeted_block(self):", source)
+        self.assertIn("def place_targeted_block(self):", source)
 
     def test_atlas_uvs_stay_inside_selected_tile(self):
         u, v = Panda3DRenderBridge._atlas_uv(1, "top", (0.5, 0.5))
