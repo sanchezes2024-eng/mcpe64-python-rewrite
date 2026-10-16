@@ -42,7 +42,7 @@ class Game:
 
     def jump(self):
         if self.grounded:
-            self.vertical_speed=10.0
+            self.vertical_speed=13.0
             self.grounded=False
 
     def step(self, keys=(), dt=1/30, look_x=0.0, look_y=0.0):
@@ -62,8 +62,8 @@ class Game:
         if length>0:
             mx,mz=mx/length,mz/length
         # Native KeyboardInput scales movement input to 0.3 while sneaking.
-        speed=6.0*(0.3 if "shift" in keys else 1.0)
-        self.vertical_speed-=45.0*dt
+        speed=9.0*(0.3 if "shift" in keys else 1.0)
+        self.vertical_speed-=55.0*dt
         result=move_and_collide(self.world,self.player_bounds(),mx*speed*dt,
                                 self.vertical_speed*dt,mz*speed*dt)
         self.player_x=(result.bounds.min_x+result.bounds.max_x)*.5
