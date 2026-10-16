@@ -12,7 +12,7 @@ class TextureTests(unittest.TestCase):
 
     def test_bilinear_sampling(self):
         tex=Texture(2,2,bytes((0,0,0,255,0,0,0,0,255,255,255,255)),3)
-        self.assertEqual(tex.sample(.5,.5,bilinear=True),(128,64,64,255))
+        self.assertEqual(tex.sample(.5,.5,bilinear=True),(128,64,128,255))
 
     def test_ppm_ascii_load(self):
         with tempfile.TemporaryDirectory() as tmp:
