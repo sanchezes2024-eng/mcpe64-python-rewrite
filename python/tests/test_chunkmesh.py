@@ -28,10 +28,10 @@ class ChunkMeshTests(unittest.TestCase):
         world=World(2,4,2)
         world.set_block(0,1,0,STONE)
         r=SoftwareRenderer(64,64)
-        r.begin_frame(Vec3(2,2,4),Vec3(.5,1,.5),(0,0,0))
+        r.begin_frame(Vec3(.5,1.5,4),Vec3(.5,1.5,.5),(0,0,0))
         count=draw_world(r,world,textures={STONE:Texture.solid((40,80,220))})
         self.assertEqual(count,12)
-        self.assertIn(bytes((40,80,220)),r.framebuffer.color)
+        self.assertIn(bytes((28,56,154)),r.framebuffer.color)
 
 if __name__=="__main__":
     unittest.main()
