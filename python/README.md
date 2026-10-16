@@ -9,7 +9,7 @@ This is a dependency-free Python engine prototype kept separate from the native 
 - Texture sampling (nearest and bilinear) and PPM / uncompressed BMP loading
 - Multiplicative tint/lighting and approximate depth-based fog
 - Voxel chunks, world-coordinate manager, terrain prototype, exposed-face mesh generation and renderer bridge
-- First-person camera, simulation step loop, keyboard movement, gravity, jumping and block collision
+- First-person camera, keyboard movement, gravity, jumping, and axis-clipped voxel collision based on the native Entity::move ordering
 - Optional Tkinter demo that displays the software-rendered world
 - Automated unit tests for the engine prototype
 
@@ -25,7 +25,7 @@ python3 -m unittest discover -s tests -v
 python3 -m mcpepy.demo
 ```
 
-Requires a Python build with Tkinter available. Controls: W/A/S/D move, Space jump, Shift sprint, arrow keys look, Esc quit. This is an early prototype, not the original game.
+Requires a Python build with Tkinter available. Controls: click inside the game to capture/hide the mouse; move the mouse to look; Esc releases the pointer; click again to recapture. W/A/S/D move, Space jumps, and Shift sneaks. This is an early prototype, not the original game.
 
 ## Remaining phases
 
@@ -41,7 +41,7 @@ python3 -m pip install -r requirements-panda3d.txt
 python3 -m mcpepy.panda_demo
 ```
 
-The new `mcpepy.panda3d_bridge` converts the Python world's exposed block faces
+The new `mcpepy.panda3d_bridge` captures and recenters the mouse for first-person look (Escape releases it), and converts the Python world's exposed block faces
 into a batched Panda3D scene-graph geometry and uses Panda3D's camera, lighting,
 and fog. It adapts the existing Python game loop to Panda3D's task/input system.
 The coordinate bridge converts the prototype's Y-up world to Panda3D's Z-up
