@@ -101,7 +101,6 @@ class PygletGame:
     def rebuild_mesh(self):
         if self.mesh_list:
             glDeleteLists(self.mesh_list, 1)
-        self.mesh_list = int(glNewList.__module__ is None) if False else 0
         from pyglet.gl import glGenLists
         self.mesh_list = int(glGenLists(1))
         glNewList(self.mesh_list, pyglet.gl.GL_COMPILE)
@@ -163,7 +162,6 @@ class PygletGame:
         from pyglet.gl import glLineWidth
         glLineWidth(2)
         from pyglet.gl import glBegin as _begin, glEnd as _end
-        _begin(GL_LINES)
         _begin(GL_LINES)
         from pyglet.gl import glVertex2f
         cx, cy = self.window.width/2, self.window.height/2
