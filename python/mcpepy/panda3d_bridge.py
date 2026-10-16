@@ -157,7 +157,10 @@ class Panda3DRenderBridge:
         node = p["GeomNode"]("mcpe-textured-voxel-world")
         node.addGeom(geom)
         self.node_path = self.base.render.attachNewNode(node)
-        self.node_path.setTwoSided(True)
+        self.node_path.setTwoSided(False)
+        # Face brightness is already baked into vertex colors; skip dynamic
+        # per-pixel/per-vertex scene lighting on this static terrain mesh.
+        self.node_path.setLightOff(1)
         if self.texture is not None:
             self.node_path.setTexture(self.texture, 1)
         else:
@@ -359,16 +362,15 @@ class Panda3DGameAdapter:
         camera.setR(0)
 
     def _tick(self, task):
-        # Accumulate elapsed wall-clock time instead of discarding everything
-        # beyond 50 ms. Dropping that time makes movement and falling run slow
-        # whenever rendering dips below 20 FPS.
-        elapsed = min(max(float(task.dt), 0.0), 0.25)
+        # Keep fixed-rate physics, but cap catch-up work to avoid a spiral of
+        # death when a frame is late. Any larger backlog is discarded so the
+        # game remains responsive instead of trying to simulate a long pause.
+        elapsed = min(max(float(task.dt), 0.0), 0.05)
         dx, dy = self._read_mouse_delta()
-        self._tick_accumulator += elapsed
+        self._tick_accumulator = min(self._tick_accumulator + elapsed,
+                                     self._fixed_dt * 3.0)
         steps = 0
-        while self._tick_accumulator >= self._fixed_dt and steps < 15:
-            # Apply this frame's mouse delta exactly once; subsequent catch-up
-            # steps advance physics without repeating the same camera motion.
+        while self._tick_accumulator >= self._fixed_dt and steps < 3:
             if steps == 0:
                 look_x = -dx * self.MOUSE_SENSITIVITY / self._fixed_dt
                 look_y = -dy * self.MOUSE_SENSITIVITY / self._fixed_dt
