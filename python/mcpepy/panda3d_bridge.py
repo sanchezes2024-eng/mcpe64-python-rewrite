@@ -202,6 +202,8 @@ class Panda3DGameAdapter:
         base.camLens.setFov(70)
         self._keys = set()
         self._mouse_locked = False
+        self._tick_accumulator = 0.0
+        self._fixed_dt = 1.0 / 60.0
         self._bind_inputs()
         self._sync_camera()
         self.base.taskMgr.add(self._tick, "mcpe-python-game-tick")
@@ -357,17 +359,26 @@ class Panda3DGameAdapter:
         camera.setR(0)
 
     def _tick(self, task):
-        dt = min(max(task.dt, 0.0), 0.05)
+        # Accumulate elapsed wall-clock time instead of discarding everything
+        # beyond 50 ms. Dropping that time makes movement and falling run slow
+        # whenever rendering dips below 20 FPS.
+        elapsed = min(max(float(task.dt), 0.0), 0.25)
         dx, dy = self._read_mouse_delta()
-        # Mouse movement is a per-frame delta, unlike the game step's
-        # radians-per-second look input.
-        # Panda's positive horizontal pointer delta is opposite to the
-        # native MCPE yaw convention used by Game.step().
-        look_x = -dx * self.MOUSE_SENSITIVITY / max(dt, 1e-6)
-        look_y = -dy * self.MOUSE_SENSITIVITY / max(dt, 1e-6)
-        if not self._mouse_locked:
-            look_x = 0.0
-            look_y = 0.0
-        self.game.step(self._keys, dt, look_x=look_x, look_y=look_y)
+        self._tick_accumulator += elapsed
+        steps = 0
+        while self._tick_accumulator >= self._fixed_dt and steps < 15:
+            # Apply this frame's mouse delta exactly once; subsequent catch-up
+            # steps advance physics without repeating the same camera motion.
+            if steps == 0:
+                look_x = -dx * self.MOUSE_SENSITIVITY / self._fixed_dt
+                look_y = -dy * self.MOUSE_SENSITIVITY / self._fixed_dt
+                if not self._mouse_locked:
+                    look_x = look_y = 0.0
+            else:
+                look_x = look_y = 0.0
+            self.game.step(self._keys, self._fixed_dt,
+                           look_x=look_x, look_y=look_y)
+            self._tick_accumulator -= self._fixed_dt
+            steps += 1
         self._sync_camera()
         return task.cont
