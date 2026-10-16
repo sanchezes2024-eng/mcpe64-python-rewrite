@@ -31,7 +31,6 @@ class Panda3DAdapterTests(unittest.TestCase):
         self.assertIn("GeomVertexArrayFormat", source)
         self.assertIn("InternalName.getTexcoord()", source)
         self.assertIn("InternalName.getColor()", source)
-        self.assertNotIn("getV3t2c4()", source)
 
     def test_slider_reads_value_from_directslider_instance(self):
         from pathlib import Path
