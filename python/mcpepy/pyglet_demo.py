@@ -249,7 +249,7 @@ class PygletGame:
         if self.texture_id:
             textures = (pyglet.gl.GLuint * 1)(self.texture_id)
             glDeleteTextures(1, textures)
-        return pyglet.event.EVENT_HANDLED
+        return pyglet.event.EVENT_UNHANDLED
 
 
 def main():
