@@ -55,9 +55,9 @@ class World:
                 wz = cz * self.chunk_depth + z
                 for dx, dy, dz, direction in Chunk.DIRECTIONS:
                     ny = y + dy
-                    if not 0 <= ny < self.chunk_height:
-                        continue
-                    if self.get_block(wx + dx, ny, wz + dz) == AIR:
+                    # Outside the vertical world bounds is exposed air for meshing.
+                    if (not 0 <= ny < self.chunk_height
+                            or self.get_block(wx + dx, ny, wz + dz) == AIR):
                         yield Face(wx, y, wz, direction, block_id)
 
 
