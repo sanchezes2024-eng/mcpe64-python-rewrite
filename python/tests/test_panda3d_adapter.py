@@ -29,8 +29,8 @@ class Panda3DAdapterTests(unittest.TestCase):
         source = (Path(__file__).resolve().parents[1] / "mcpepy" /
                   "panda3d_bridge.py").read_text()
         self.assertIn("GeomVertexArrayFormat", source)
-        self.assertIn("InternalName.getTexcoord()", source)
-        self.assertIn("InternalName.getColor()", source)
+        self.assertIn('["InternalName"].getTexcoord()', source)
+        self.assertIn('["InternalName"].getColor()', source)
 
     def test_slider_reads_value_from_directslider_instance(self):
         from pathlib import Path
