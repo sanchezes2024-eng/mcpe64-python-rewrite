@@ -2,6 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from mcpepy.world import World
 from mcpepy.region_file import (
     CHUNK_BLOCK_COUNT, CHUNK_COLUMNS, NIBBLE_ARRAY_BYTES,
     NativeChunkData, RegionFile, decode_chunk_payload, encode_chunk_payload,
@@ -32,6 +33,16 @@ class NativeRegionFileTests(unittest.TestCase):
             self.assertEqual(region.read_chunk(2, 3), chunk)
             self.assertIsNone(region.read_chunk(3, 3))
             self.assertTrue((Path(directory) / "chunks.dat").is_file())
+
+    def test_native_chunk_blocks_load_into_world_with_matching_layout(self):
+        with tempfile.TemporaryDirectory() as directory:
+            region = RegionFile(directory)
+            region.open()
+            region.write_chunk(1, 2, encode_chunk_payload(self.make_chunk(17)))
+            world = World(16, 128, 16)
+            self.assertEqual(region.load_into_world(world), 1)
+            self.assertEqual(world.get_block(16, 0, 32), 17)
+            self.assertEqual(world.get_block(16, 127, 32), 17)
 
     def test_chunk_coordinates_are_bounded_to_native_region(self):
         with tempfile.TemporaryDirectory() as directory:
