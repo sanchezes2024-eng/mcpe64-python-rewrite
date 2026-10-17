@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-ILLEGAL_FILE_CHARACTERS = "/\\n\\r\\t\\0\\f\`?*\\\\<>|\\\":"
+ILLEGAL_FILE_CHARACTERS = "/\n\r\t\0\f`?*\\<>|\":""
 TEMP_LEVEL_ID = "_LastJoinedServer"
 
 
