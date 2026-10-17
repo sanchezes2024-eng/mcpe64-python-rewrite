@@ -18,11 +18,13 @@ class Panda3DAdapterTests(unittest.TestCase):
         self.assertEqual(Panda3DRenderBridge._to_panda(Vertex()), (2.0, 5.0, 3.0))
 
     def test_original_terrain_atlas_tiles_are_defined_for_supported_blocks(self):
-        self.assertEqual(TERRAIN_TILES[1]["top"], (0, 0))
-        self.assertEqual(TERRAIN_TILES[1]["side"], (3, 0))
-        self.assertEqual(TERRAIN_TILES[2]["all"], (2, 0))
-        self.assertEqual(TERRAIN_TILES[3]["all"], (1, 0))
-        self.assertEqual(TERRAIN_TILES[4]["all"], (1, 1))
+        # Tile IDs and texture indices match Tile::initTiles() in Tile.cpp.
+        self.assertEqual(TERRAIN_TILES[1]["all"], (1, 0))  # stone
+        self.assertEqual(TERRAIN_TILES[2]["top"], (0, 0))  # grass
+        self.assertEqual(TERRAIN_TILES[2]["side"], (3, 0))
+        self.assertEqual(TERRAIN_TILES[3]["all"], (2, 0))  # dirt
+        self.assertEqual(TERRAIN_TILES[4]["all"], (0, 1))  # stone brick
+        self.assertGreaterEqual(len(TERRAIN_TILES), 70)
 
     def test_renderer_uses_a_portable_custom_vertex_format(self):
         from pathlib import Path
