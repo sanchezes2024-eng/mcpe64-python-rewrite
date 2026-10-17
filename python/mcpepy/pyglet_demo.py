@@ -286,7 +286,7 @@ class PygletGame:
     def _load_ui_assets(self):
         """Load original Pocket Edition GUI textures and the bundled pixel font."""
         for name in ("gui/background.png", "gui/title.png", "gui/gui.png",
-                     "gui/touchgui.png", "gui/icons.png", "gui/default_world.png"):
+                     "gui/touchgui.png", "gui/icons.png", "gui/default_world.png", "gui/logo/github.png"):
             path = ASSET_ROOT / name
             if path.is_file():
                 try:
@@ -369,17 +369,31 @@ class PygletGame:
         bw, bh, gap, cx = min(330, w * 0.62), max(34, h * 0.075), max(7, h * 0.018), w / 2
 
         if self.screen == "title":
+            # StartMenuScreen::render draws title.png at GUI y=4. Screen GUI
+            # coordinates are top-origin in the C++ renderer; Pyglet is bottom-origin.
             self._draw_title_art()
-            for i, (label, action) in enumerate([
-                ("Start Game", "worlds"), ("Join Game", "join"), ("Options", "options")
-            ]):
-                # StartMenuScreen.cpp has centered Start Game, Join Game, and Options buttons.
-                self._draw_mc_button(label, action, cx, h * 0.55 - i * (bh + gap),
-                    min(bw, 160 * max(1.0, h / 600.0)), max(24, 24 * max(1.0, h / 600.0)))
+            y_base = h / 2 + 25
+            native_buttons = (
+                ("Start Game", "worlds", (w - 160) / 2, y_base - 28, 160, 24),
+                ("Join Game", "join", (w - 160) / 2, y_base, 160, 24),
+                ("Options", "options", (w - 160) / 2, y_base + 30, 78, 22),
+            )
+            for label, action, x0, top_y, button_w, button_h in native_buttons:
+                self._draw_mc_button(
+                    label, action, x0 + button_w / 2,
+                    h - top_y - button_h / 2, button_w, button_h,
+                )
             pyglet.text.Label("v0.6.1 alpha", font_name="Minecraft", font_size=10,
-                x=(w / 2), y=62, anchor_x="center", color=(204, 204, 204, 255)).draw()
+                x=w / 2, y=h - 62, anchor_x="center",
+                color=(204, 204, 204, 255)).draw()
             pyglet.text.Label("© Mojang AB", font_name="Minecraft", font_size=9,
-                x=w-4, y=8, anchor_x="right", color=(255, 255, 255, 255)).draw()
+                x=w-1, y=2, anchor_x="right", color=(255, 255, 255, 255)).draw()
+            logo = self.ui_images.get("gui/logo/github.png")
+            if logo is not None:
+                logo.blit(2, 2)
+            pyglet.text.Label("Kolyah35/minecraft-pe-0.6.1", font_name="Minecraft",
+                font_size=9, x=12, y=10, anchor_x="left",
+                color=(255, 255, 255, 255)).draw()
 
         elif self.screen == "worlds":
             pyglet.text.Label("Select World", font_name="Minecraft", bold=True,
