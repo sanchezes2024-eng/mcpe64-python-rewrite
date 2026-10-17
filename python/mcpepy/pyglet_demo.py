@@ -397,6 +397,25 @@ class PygletGame:
             self._draw_mc_button("Create New World", "create_world", cx, bottom, bw, bh)
             self._draw_mc_button("Back", "title", cx, bottom - bh - gap, bw, bh)
 
+        elif self.screen == "world_selected":
+            selected = next((w for w in list_worlds()
+                if w.id == self.selected_world_id), None)
+            selected_name = selected.name if selected else self.world_name
+            pyglet.text.Label(selected_name, font_name="Minecraft", bold=True,
+                font_size=max(18, int(h * 0.04)), x=cx, y=h * 0.64,
+                anchor_x="center", anchor_y="center", color=(255,255,255,255)).draw()
+            pyglet.text.Label("Native world metadata found.", font_name="Minecraft",
+                font_size=12, x=cx, y=h * 0.55, anchor_x="center",
+                color=(220,220,220,255)).draw()
+            pyglet.text.Label("Chunk loading and native terrain generation are not yet ported;",
+                font_name="Minecraft", font_size=10, x=cx, y=h * 0.49,
+                anchor_x="center", color=(255,220,160,255)).draw()
+            pyglet.text.Label("starting now uses the temporary prototype terrain.",
+                font_name="Minecraft", font_size=10, x=cx, y=h * 0.46,
+                anchor_x="center", color=(255,220,160,255)).draw()
+            self._draw_mc_button("Start (prototype terrain)", "start_world", cx, h * 0.36, bw, bh)
+            self._draw_mc_button("Back", "worlds", cx, h * 0.36-bh-gap, bw, bh)
+
         elif self.screen == "create":
             pyglet.text.Label("Create New World", font_name="Minecraft", bold=True,
                 font_size=max(18, int(h * 0.04)), x=cx, y=h * 0.62,
