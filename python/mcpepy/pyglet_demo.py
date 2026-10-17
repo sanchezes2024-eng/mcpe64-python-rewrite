@@ -57,6 +57,10 @@ def _face_uvs(block_id, direction, uv):
 class PygletGame:
     def __init__(self):
         self.game = Game()
+        self.screen = "title"
+        self.menu_buttons = []
+        self.world_name = "My World"
+        self.options = {"mouse_sensitivity": 0.0025, "show_fps": False}
         self.window = pyglet.window.Window(
             width=960, height=600, caption="MCPE 0.6.1 Python — Pyglet",
             resizable=True, vsync=True,
@@ -136,6 +140,9 @@ class PygletGame:
     def on_draw(self):
         self.window.clear()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        if self.screen != "playing":
+            self._draw_menu()
+            return
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
         x, y, z = self.game.player_x, self.game.player_y + 1.55, self.game.player_z
@@ -209,7 +216,88 @@ class PygletGame:
             maximum[axis] += delta[axis]
         return None
 
+    def _draw_menu(self):
+        from pyglet.gl import glOrtho
+        from pyglet import shapes
+        glDisable(GL_TEXTURE_2D)
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        glOrtho(0, self.window.width, 0, self.window.height, -1, 1)
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
+        w, h = self.window.width, self.window.height
+        glClearColor(0.24, 0.42, 0.62, 1.0)
+        glClear(GL_COLOR_BUFFER_BIT)
+        shapes.Rectangle(0, 0, w, h, color=(93, 151, 190)).draw()
+        shapes.Rectangle(0, 0, w, h * 0.27, color=(86, 132, 58)).draw()
+        shapes.Rectangle(0, 0, w, h * 0.10, color=(103, 77, 48)).draw()
+        pyglet.text.Label("MINECRAFT", font_name="Arial", bold=True,
+            font_size=max(26, int(h*0.075)), x=w/2, y=h*0.79,
+            anchor_x="center", anchor_y="center", color=(255,255,255,255)).draw()
+        pyglet.text.Label("POCKET EDITION 0.6.1 ALPHA", font_name="Arial", bold=True,
+            font_size=max(10, int(h*0.022)), x=w/2, y=h*0.72,
+            anchor_x="center", anchor_y="center", color=(255,244,170,255)).draw()
+        self.menu_buttons = []
+        def button(label, action, cx, cy, bw, bh):
+            shapes.Rectangle(cx-bw/2, cy-bh/2, bw, bh, color=(55,55,55)).draw()
+            shapes.Rectangle(cx-bw/2+2, cy-bh/2+2, bw-4, bh-4, color=(112,112,112)).draw()
+            pyglet.text.Label(label, font_name="Arial", bold=True,
+                font_size=max(10, int(bh*0.38)), x=cx, y=cy,
+                anchor_x="center", anchor_y="center", color=(255,255,255,255)).draw()
+            self.menu_buttons.append((cx-bw/2,cy-bh/2,cx+bw/2,cy+bh/2,action))
+        bw, bh, gap, cx = min(330,w*0.62), max(34,h*0.075), max(7,h*0.018), w/2
+        if self.screen == "title":
+            for i,(label,action) in enumerate([("Play","worlds"),("Options","options"),("About","about")]):
+                button(label,action,cx,h*0.55-i*(bh+gap),bw,bh)
+        elif self.screen == "worlds":
+            pyglet.text.Label("Select World", font_name="Arial", bold=True,
+                font_size=max(18,int(h*0.04)),x=cx,y=h*0.62,anchor_x="center",anchor_y="center").draw()
+            button(self.world_name,"start_world",cx,h*0.49,bw,bh)
+            button("Create New World","create_world",cx,h*0.49-bh-gap,bw,bh)
+            button("Back","title",cx,h*0.49-2*(bh+gap),bw,bh)
+        elif self.screen == "create":
+            pyglet.text.Label("Create New World",font_name="Arial",bold=True,
+                font_size=max(18,int(h*0.04)),x=cx,y=h*0.62,anchor_x="center",anchor_y="center").draw()
+            pyglet.text.Label("World name: "+self.world_name,font_name="Arial",
+                font_size=max(12,int(h*0.025)),x=cx,y=h*0.52,anchor_x="center",anchor_y="center").draw()
+            button("Create World","start_world",cx,h*0.43,bw,bh)
+            button("Back","worlds",cx,h*0.43-bh-gap,bw,bh)
+        elif self.screen == "options":
+            pyglet.text.Label("Options",font_name="Arial",bold=True,font_size=max(18,int(h*0.04)),
+                x=cx,y=h*0.62,anchor_x="center",anchor_y="center").draw()
+            button("Mouse sensitivity: "+("Low" if self.options["mouse_sensitivity"]<.0025 else "Normal" if self.options["mouse_sensitivity"]<.004 else "High"),
+                "sensitivity",cx,h*0.50,bw,bh)
+            button("Back","title",cx,h*0.50-bh-gap,bw,bh)
+        elif self.screen == "about":
+            pyglet.text.Label("Minecraft PE 0.6.1 Alpha",font_name="Arial",bold=True,
+                font_size=max(16,int(h*0.035)),x=cx,y=h*0.58,anchor_x="center",anchor_y="center").draw()
+            pyglet.text.Label("Python recreation based on the original C++ source",font_name="Arial",
+                font_size=max(10,int(h*0.022)),x=cx,y=h*0.51,anchor_x="center",anchor_y="center").draw()
+            button("Back","title",cx,h*0.41,bw,bh)
+
+    def _activate_menu_button(self, action):
+        if action in ("title","worlds","create","options","about"):
+            self.screen = action
+        elif action == "create_world":
+            self.screen = "create"
+        elif action == "sensitivity":
+            values=[0.0015,0.0025,0.004]
+            current=self.options["mouse_sensitivity"]
+            self.options["mouse_sensitivity"]=values[(values.index(current)+1)%len(values)] if current in values else values[0]
+        elif action == "start_world":
+            self.screen = "playing"
+            self.mouse_locked = True
+            self.window.set_exclusive_mouse(True)
+            self.rebuild_mesh()
+
     def on_mouse_press(self, x, y, button, modifiers):
+        if self.screen != "playing":
+            if button == mouse.LEFT:
+                for x0,y0,x1,y1,action in reversed(self.menu_buttons):
+                    if x0<=x<=x1 and y0<=y<=y1:
+                        self._activate_menu_button(action)
+                        return
+            return
         if not self.mouse_locked:
             self.mouse_locked = True
             self.window.set_exclusive_mouse(True)
@@ -233,15 +321,29 @@ class PygletGame:
 
     def on_mouse_motion(self, x, y, dx, dy):
         if not self.mouse_locked: return
-        self.game.yaw += dx * 0.0025
-        self.game.pitch = max(-1.5533, min(1.5533, self.game.pitch + dy*0.0025))
+        self.game.yaw += dx * self.options["mouse_sensitivity"]
+        self.game.pitch = max(-1.5533, min(1.5533, self.game.pitch + dy*self.options["mouse_sensitivity"]))
 
     def on_key_press(self, symbol, modifiers):
         if symbol == key.ESCAPE:
-            self.mouse_locked = False
-            self.window.set_exclusive_mouse(False)
-        elif symbol == key.SPACE:
+            if self.screen == "playing":
+                self.mouse_locked = False
+                self.window.set_exclusive_mouse(False)
+                self.screen = "title"
+            elif self.screen != "title":
+                self.screen = "title"
+            else:
+                self.window.close()
+        elif symbol == key.SPACE and self.screen == "playing":
             self.game.jump()
+        elif self.screen == "create" and symbol == key.BACKSPACE:
+            self.world_name = self.world_name[:-1]
+        elif self.screen == "create" and symbol == key.ENTER:
+            self.screen = "playing"
+            self.mouse_locked = True
+            self.window.set_exclusive_mouse(True)
+        elif self.screen == "create" and symbol in range(key.A, key.Z+1):
+            self.world_name += chr(symbol).lower()
 
     def on_close(self):
         if self.mesh_list:
