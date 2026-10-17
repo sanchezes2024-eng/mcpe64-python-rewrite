@@ -36,6 +36,7 @@ from .panda3d_bridge import TERRAIN_TILES, ASSET_ROOT
 from .voxel import AIR, GRASS, DIRT, STONE
 from .inventory import Inventory
 from .particles import ParticleEngine
+from .settings import load_options, save_options
 
 
 FACE_LIGHT = {
@@ -62,7 +63,7 @@ class PygletGame:
         self.screen = "title"
         self.menu_buttons = []
         self.world_name = "My World"
-        self.options = {"mouse_sensitivity": 0.0025, "show_fps": False}
+        self.options = load_options()
         self.previous_screen = "title"
         self.inventory = Inventory()
         self.inventory.add(DIRT, 32)
@@ -197,6 +198,10 @@ class PygletGame:
         gluPerspective(70.0, max(1, self.window.width)/max(1, self.window.height), 0.05, 96.0)
         glMatrixMode(GL_MODELVIEW)
         self._draw_hud()
+        if self.options.get("show_fps"):
+            pyglet.text.Label("FPS: %d" % pyglet.clock.get_fps(),
+                font_name="Arial", font_size=12, x=8, y=self.window.height-20,
+                color=(255,255,255,255)).draw()
 
     def _draw_hud(self):
         from pyglet import shapes
@@ -319,10 +324,14 @@ class PygletGame:
             button("Back","worlds",cx,h*0.43-bh-gap,bw,bh)
         elif self.screen == "options":
             pyglet.text.Label("Options",font_name="Arial",bold=True,font_size=max(18,int(h*0.04)),
-                x=cx,y=h*0.62,anchor_x="center",anchor_y="center").draw()
+                x=cx,y=h*0.66,anchor_x="center",anchor_y="center").draw()
             button("Mouse sensitivity: "+("Low" if self.options["mouse_sensitivity"]<.0025 else "Normal" if self.options["mouse_sensitivity"]<.004 else "High"),
-                "sensitivity",cx,h*0.50,bw,bh)
-            button("Back","title",cx,h*0.50-bh-gap,bw,bh)
+                "sensitivity",cx,h*0.53,bw,bh)
+            button("Invert mouse Y: "+("On" if self.options["invert_y"] else "Off"),
+                "invert_y",cx,h*0.53-bh-gap,bw,bh)
+            button("Show FPS: "+("On" if self.options["show_fps"] else "Off"),
+                "show_fps",cx,h*0.53-2*(bh+gap),bw,bh)
+            button("Back","options_back",cx,h*0.53-3*(bh+gap),bw,bh)
         elif self.screen == "about":
             pyglet.text.Label("Minecraft PE 0.6.1 Alpha",font_name="Arial",bold=True,
                 font_size=max(16,int(h*0.035)),x=cx,y=h*0.58,anchor_x="center",anchor_y="center").draw()
@@ -385,6 +394,15 @@ class PygletGame:
             values=[0.0015,0.0025,0.004]
             current=self.options["mouse_sensitivity"]
             self.options["mouse_sensitivity"]=values[(values.index(current)+1)%len(values)] if current in values else values[0]
+            save_options(self.options)
+        elif action == "invert_y":
+            self.options["invert_y"] = not self.options["invert_y"]
+            save_options(self.options)
+        elif action == "show_fps":
+            self.options["show_fps"] = not self.options["show_fps"]
+            save_options(self.options)
+        elif action == "options_back":
+            self.screen = self.previous_screen if self.previous_screen in ("pause", "title") else "title"
         elif action == "start_world":
             self.screen = "playing"
             self.mouse_locked = True
@@ -439,7 +457,8 @@ class PygletGame:
     def on_mouse_motion(self, x, y, dx, dy):
         if not self.mouse_locked: return
         self.game.yaw += dx * self.options["mouse_sensitivity"]
-        self.game.pitch = max(-1.5533, min(1.5533, self.game.pitch + dy*self.options["mouse_sensitivity"]))
+        direction = -1 if self.options.get("invert_y") else 1
+        self.game.pitch = max(-1.5533, min(1.5533, self.game.pitch + direction*dy*self.options["mouse_sensitivity"]))
 
     def on_key_press(self, symbol, modifiers):
         if symbol == key.ESCAPE:
