@@ -8,13 +8,13 @@ from __future__ import annotations
 import math
 from typing import Iterator
 
-from .voxel import AIR, GRASS, DIRT, STONE, Chunk, Face
+from .voxel import AIR, BLOCKS, GRASS, DIRT, STONE, Chunk, Face
 
 
 class World:
     """A sparse collection of chunks with consistent world-coordinate access."""
 
-    def __init__(self, chunk_width: int = 16, chunk_height: int = 64,
+    def __init__(self, chunk_width: int = 16, chunk_height: int = 128,
                  chunk_depth: int = 16):
         self.chunk_width = int(chunk_width)
         self.chunk_height = int(chunk_height)
@@ -56,8 +56,12 @@ class World:
                 for dx, dy, dz, direction in Chunk.DIRECTIONS:
                     ny = y + dy
                     # Outside the vertical world bounds is exposed air for meshing.
-                    if (not 0 <= ny < self.chunk_height
-                            or self.get_block(wx + dx, ny, wz + dz) == AIR):
+                    if not 0 <= ny < self.chunk_height:
+                        yield Face(wx, y, wz, direction, block_id)
+                        continue
+                    adjacent_id = self.get_block(wx + dx, ny, wz + dz)
+                    adjacent = BLOCKS.get(adjacent_id)
+                    if adjacent_id == AIR or adjacent is None or adjacent.transparent:
                         yield Face(wx, y, wz, direction, block_id)
 
 
