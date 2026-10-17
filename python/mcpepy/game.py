@@ -18,7 +18,7 @@ class Game:
     renderer: SoftwareRenderer = field(init=False)
     camera: Camera = field(init=False)
     player_x: float = field(init=False, default=8.0)
-    player_y: float = field(init=False, default=5.0)
+    player_y: float = field(init=False, default=12.0)
     player_z: float = field(init=False, default=8.0)
     vertical_speed: float = field(init=False, default=0.0)
     grounded: bool = field(init=False, default=False)
