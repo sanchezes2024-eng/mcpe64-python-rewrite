@@ -14,13 +14,13 @@ try:
     from pyglet.gl import (
         GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT, GL_DEPTH_TEST,
         GL_MODELVIEW, GL_PROJECTION, GL_QUADS, GL_TEXTURE_2D,
-        GL_CULL_FACE, GL_BACK, GL_TEXTURE_MIN_FILTER, GL_TEXTURE_MAG_FILTER,
+        GL_CULL_FACE, GL_BACK, GL_POINTS, GL_TEXTURE_MIN_FILTER, GL_TEXTURE_MAG_FILTER,
         GL_NEAREST, GL_RGBA, GL_UNSIGNED_BYTE, GL_UNPACK_ALIGNMENT,
         glBegin, glBindTexture, glClear, glClearColor, glColor3f, glDisable,
         glEnable, glEnd, glGenTextures, glLoadIdentity, glMatrixMode,
         glNewList, glEndList, glCallList, glTexCoord2f, glTexImage2D,
         glTexParameteri, glVertex3f, glViewport, glPixelStorei, glDeleteLists,
-        glDeleteTextures, glCullFace, glClearDepth, glDepthFunc, GL_LEQUAL,
+        glDeleteTextures, glCullFace, glClearDepth, glDepthFunc, glPointSize, GL_LEQUAL,
     )
     from pyglet.gl import gluPerspective, gluLookAt
     from pyglet.window import key, mouse
@@ -35,6 +35,7 @@ from .chunkmesh import build_world_mesh
 from .panda3d_bridge import TERRAIN_TILES, ASSET_ROOT
 from .voxel import AIR, GRASS, DIRT, STONE
 from .inventory import Inventory
+from .particles import ParticleEngine
 
 
 FACE_LIGHT = {
@@ -67,6 +68,7 @@ class PygletGame:
         self.inventory.add(DIRT, 32)
         self.inventory.add(GRASS, 32)
         self.inventory.add(STONE, 32)
+        self.particles = ParticleEngine(seed=self.game.seed)
         self.window = pyglet.window.Window(
             width=960, height=600, caption="MCPE 0.6.1 Python — Pyglet",
             resizable=True, vsync=True,
@@ -162,6 +164,15 @@ class PygletGame:
             glBindTexture(GL_TEXTURE_2D, self.texture_id)
             glColor3f(1, 1, 1)
         glCallList(self.mesh_list)
+        if self.particles.particles:
+            glDisable(GL_TEXTURE_2D)
+            glPointSize(5.0)
+            glBegin(GL_POINTS)
+            for particle in self.particles.particles:
+                fade = max(0.0, 1.0 - particle.age / particle.lifetime)
+                glColor3f(particle.color[0]*fade, particle.color[1]*fade, particle.color[2]*fade)
+                glVertex3f(particle.x, particle.y, particle.z)
+            glEnd()
         # Small crosshair; switch to screen-space orthographic coordinates.
         glDisable(GL_TEXTURE_2D)
         glMatrixMode(GL_PROJECTION)
@@ -225,6 +236,7 @@ class PygletGame:
         dt = min(max(float(dt), 0.0), 0.05)
         if self.screen != "playing":
             return
+        self.particles.update(dt)
         pressed = set()
         for symbol, name in ((key.W, "w"), (key.A, "a"), (key.S, "s"),
                              (key.D, "d"), (key.SPACE, "space"), (key.LSHIFT, "shift")):
@@ -407,6 +419,7 @@ class PygletGame:
             block_id=self.game.world.get_block(bx,by,bz)
             if block_id != AIR:
                 self.inventory.add(block_id,1)
+                self.particles.emit_block_break(bx,by,bz,block_id)
                 self.game.world.set_block(bx,by,bz,AIR)
                 self.rebuild_mesh()
         elif button == mouse.RIGHT and air is not None:
