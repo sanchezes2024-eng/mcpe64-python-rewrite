@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Mapping
 from .math3d import Vec3
-from .voxel import Face
+from .voxel import BLOCKS, Face
 from .world import World
 
 QUAD_UVS=((0.0,0.0),(1.0,0.0),(1.0,1.0),(0.0,1.0))
@@ -67,7 +67,8 @@ def draw_world(renderer, world: World, *, textures: Mapping[int,object] | None=N
     colors=colors or {}
     face_light=face_light or {"top":1.0,"bottom":0.55,"east":0.8,
                               "west":0.8,"south":0.7,"north":0.7}
-    palette={1:(90,180,70),2:(130,90,55),3:(120,120,120),4:(65,65,65)}
+    palette={block_id: (120, 120, 120) for block_id in BLOCKS}
+    palette.update({1:(120,120,120), 2:(90,180,70), 3:(130,90,55), 7:(65,65,65)})
     triangles=0
     for face in build_world_mesh(world).faces:
         v=face.vertices
