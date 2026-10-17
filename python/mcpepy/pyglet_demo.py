@@ -63,7 +63,9 @@ class PygletGame:
         self.game = Game()
         self.screen = "title"
         self.menu_buttons = []
-        self.world_name = "My World"\n        self.worlds = list_worlds()\n        self.selected_world_id = self.worlds[0].id if self.worlds else None
+        self.world_name = "My World"
+        self.worlds = list_worlds()
+        self.selected_world_id = self.worlds[0].id if self.worlds else None
         self.options = load_options()
         self.previous_screen = "title"
         self.inventory = Inventory()
