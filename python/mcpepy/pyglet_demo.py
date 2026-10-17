@@ -81,6 +81,10 @@ class PygletGame:
         self.mouse_locked = False
         self.texture_id = 0
         self.mesh_list = 0
+        self.ui_images = {}
+        self._mouse_x = -1
+        self._mouse_y = -1
+        self._load_ui_assets()
         self._load_texture()
         self.rebuild_mesh()
         self.window.push_handlers(self)
@@ -276,104 +280,187 @@ class PygletGame:
             maximum[axis] += delta[axis]
         return None
 
+    def _load_ui_assets(self):
+        """Load original Pocket Edition GUI textures and the bundled pixel font."""
+        for name in ("gui/background.png", "gui/title.png", "gui/gui.png",
+                     "gui/touchgui.png", "gui/icons.png", "gui/default_world.png"):
+            path = ASSET_ROOT / name
+            if path.is_file():
+                try:
+                    self.ui_images[name] = pyglet.image.load(str(path))
+                except Exception:
+                    pass
+        font_path = ASSET_ROOT.parent / "fonts" / "minecraft.ttf"
+        if font_path.is_file():
+            try:
+                pyglet.font.add_file(str(font_path))
+            except Exception:
+                pass
+
+    def _draw_tiled_background(self):
+        """Use the original gui/background.png dirt tile, like Screen.cpp."""
+        from pyglet.gl import glColor4f
+        image = self.ui_images.get("gui/background.png")
+        if image is None:
+            glClearColor(0.18, 0.18, 0.18, 1.0)
+            glClear(GL_COLOR_BUFFER_BIT)
+            return
+        glEnable(GL_TEXTURE_2D)
+        glColor4f(0.25, 0.25, 0.25, 1.0)
+        tw, th = max(1, image.width), max(1, image.height)
+        for x in range(0, self.window.width + tw, tw):
+            for y in range(0, self.window.height + th, th):
+                image.blit(x, y)
+        glColor4f(1, 1, 1, 1)
+        glDisable(GL_TEXTURE_2D)
+
+    def _draw_mc_button(self, label, action, cx, cy, bw, bh):
+        """Reproduce Button::renderBg's normal/hover atlas states from gui/gui.png."""
+        from pyglet.sprite import Sprite
+        from pyglet.gl import glEnable, GL_BLEND, glBlendFunc, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA
+        x0, y0 = cx - bw / 2, cy - bh / 2
+        hovered = x0 <= self._mouse_x <= x0 + bw and y0 <= self._mouse_y <= y0 + bh
+        atlas = self.ui_images.get("gui/gui.png")
+        if atlas is not None and atlas.width >= 200 and atlas.height >= 106:
+            state = 2 if hovered else 1
+            # Button.cpp selects top-origin atlas rows 46 + state*20.
+            region_y = atlas.height - (46 + state * 20) - 20
+            region = atlas.get_region(0, region_y, 200, 20)
+            sprite = Sprite(region, x=x0, y=y0)
+            sprite.scale_x = bw / 200.0
+            sprite.scale_y = bh / 20.0
+            glEnable(GL_BLEND)
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+            sprite.draw()
+        else:
+            from pyglet import shapes
+            shapes.Rectangle(x0, y0, bw, bh, color=(70, 70, 70)).draw()
+        color = (255, 255, 160, 255) if hovered else (224, 224, 224, 255)
+        pyglet.text.Label(label, font_name="Minecraft", font_size=max(8, int(bh * 0.34)),
+            x=cx, y=cy, anchor_x="center", anchor_y="center", color=color).draw()
+        self.menu_buttons.append((x0, y0, x0 + bw, y0 + bh, action))
+
+    def _draw_title_art(self):
+        """Use the original title.png at the centered scale used by StartMenuScreen.cpp."""
+        from pyglet.sprite import Sprite
+        image = self.ui_images.get("gui/title.png")
+        if image is None:
+            return
+        scale = min(self.window.width, image.width) / max(1, image.width)
+        sprite = Sprite(image)
+        sprite.scale = scale
+        sprite.x = (self.window.width - image.width * scale) / 2
+        sprite.y = self.window.height - image.height * scale - 4
+        sprite.draw()
+
     def _draw_menu(self):
         from pyglet.gl import glOrtho
-        from pyglet import shapes
-        glDisable(GL_TEXTURE_2D)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         glOrtho(0, self.window.width, 0, self.window.height, -1, 1)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
         w, h = self.window.width, self.window.height
-        glClearColor(0.24, 0.42, 0.62, 1.0)
-        glClear(GL_COLOR_BUFFER_BIT)
-        shapes.Rectangle(0, 0, w, h, color=(93, 151, 190)).draw()
-        shapes.Rectangle(0, 0, w, h * 0.27, color=(86, 132, 58)).draw()
-        shapes.Rectangle(0, 0, w, h * 0.10, color=(103, 77, 48)).draw()
-        pyglet.text.Label("MINECRAFT", font_name="Arial", bold=True,
-            font_size=max(26, int(h*0.075)), x=w/2, y=h*0.79,
-            anchor_x="center", anchor_y="center", color=(255,255,255,255)).draw()
-        pyglet.text.Label("POCKET EDITION 0.6.1 ALPHA", font_name="Arial", bold=True,
-            font_size=max(10, int(h*0.022)), x=w/2, y=h*0.72,
-            anchor_x="center", anchor_y="center", color=(255,244,170,255)).draw()
+        self._draw_tiled_background()
         self.menu_buttons = []
-        def button(label, action, cx, cy, bw, bh):
-            shapes.Rectangle(cx-bw/2, cy-bh/2, bw, bh, color=(55,55,55)).draw()
-            shapes.Rectangle(cx-bw/2+2, cy-bh/2+2, bw-4, bh-4, color=(112,112,112)).draw()
-            pyglet.text.Label(label, font_name="Arial", bold=True,
-                font_size=max(10, int(bh*0.38)), x=cx, y=cy,
-                anchor_x="center", anchor_y="center", color=(255,255,255,255)).draw()
-            self.menu_buttons.append((cx-bw/2,cy-bh/2,cx+bw/2,cy+bh/2,action))
-        bw, bh, gap, cx = min(330,w*0.62), max(34,h*0.075), max(7,h*0.018), w/2
+        bw, bh, gap, cx = min(330, w * 0.62), max(34, h * 0.075), max(7, h * 0.018), w / 2
+
         if self.screen == "title":
-            for i,(label,action) in enumerate([("Play","worlds"),("Options","options"),("About","about")]):
-                button(label,action,cx,h*0.55-i*(bh+gap),bw,bh)
-        elif self.screen == "worlds":
-            pyglet.text.Label("Select World", font_name="Arial", bold=True,
-                font_size=max(18,int(h*0.04)),x=cx,y=h*0.62,anchor_x="center",anchor_y="center").draw()
-            button(self.world_name,"start_world",cx,h*0.49,bw,bh)
-            button("Create New World","create_world",cx,h*0.49-bh-gap,bw,bh)
-            button("Back","title",cx,h*0.49-2*(bh+gap),bw,bh)
-        elif self.screen == "create":
-            pyglet.text.Label("Create New World",font_name="Arial",bold=True,
-                font_size=max(18,int(h*0.04)),x=cx,y=h*0.62,anchor_x="center",anchor_y="center").draw()
-            pyglet.text.Label("World name: "+self.world_name,font_name="Arial",
-                font_size=max(12,int(h*0.025)),x=cx,y=h*0.52,anchor_x="center",anchor_y="center").draw()
-            button("Create World","start_world",cx,h*0.43,bw,bh)
-            button("Back","worlds",cx,h*0.43-bh-gap,bw,bh)
-        elif self.screen == "options":
-            pyglet.text.Label("Options",font_name="Arial",bold=True,font_size=max(18,int(h*0.04)),
-                x=cx,y=h*0.66,anchor_x="center",anchor_y="center").draw()
-            button("Mouse sensitivity: "+("Low" if self.options["mouse_sensitivity"]<.0025 else "Normal" if self.options["mouse_sensitivity"]<.004 else "High"),
-                "sensitivity",cx,h*0.53,bw,bh)
-            button("Invert mouse Y: "+("On" if self.options["invert_y"] else "Off"),
-                "invert_y",cx,h*0.53-bh-gap,bw,bh)
-            button("Show FPS: "+("On" if self.options["show_fps"] else "Off"),
-                "show_fps",cx,h*0.53-2*(bh+gap),bw,bh)
-            button("Back","options_back",cx,h*0.53-3*(bh+gap),bw,bh)
-        elif self.screen == "about":
-            pyglet.text.Label("Minecraft PE 0.6.1 Alpha",font_name="Arial",bold=True,
-                font_size=max(16,int(h*0.035)),x=cx,y=h*0.58,anchor_x="center",anchor_y="center").draw()
-            pyglet.text.Label("Python recreation based on the original C++ source",font_name="Arial",
-                font_size=max(10,int(h*0.022)),x=cx,y=h*0.51,anchor_x="center",anchor_y="center").draw()
-            button("Back","title",cx,h*0.41,bw,bh)
-        elif self.screen == "pause":
-            pyglet.text.Label("Game menu",font_name="Arial",bold=True,
-                font_size=max(20,int(h*0.045)),x=cx,y=h*0.64,anchor_x="center",anchor_y="center").draw()
-            for i,(label,action) in enumerate([
-                ("Back to game","resume"),("Options","pause_options"),("Quit to title","title")
+            self._draw_title_art()
+            for i, (label, action) in enumerate([
+                ("Play", "worlds"), ("Options", "options"), ("About", "about")
             ]):
-                button(label,action,cx,h*0.52-i*(bh+gap),bw,bh)
+                self._draw_mc_button(label, action, cx, h * 0.55 - i * (bh + gap), bw, bh)
+            pyglet.text.Label("v0.6.1 alpha", font_name="Minecraft", font_size=10,
+                x=(w / 2), y=62, anchor_x="center", color=(204, 204, 204, 255)).draw()
+            pyglet.text.Label("© Mojang AB", font_name="Minecraft", font_size=9,
+                x=w-4, y=8, anchor_x="right", color=(255, 255, 255, 255)).draw()
+
+        elif self.screen == "worlds":
+            pyglet.text.Label("Select World", font_name="Minecraft", bold=True,
+                font_size=max(18, int(h * 0.04)), x=cx, y=h * 0.62,
+                anchor_x="center", anchor_y="center", color=(255, 255, 255, 255)).draw()
+            self._draw_mc_button(self.world_name, "start_world", cx, h * 0.49, bw, bh)
+            self._draw_mc_button("Create New World", "create_world", cx, h * 0.49-bh-gap, bw, bh)
+            self._draw_mc_button("Back", "title", cx, h * 0.49-2*(bh+gap), bw, bh)
+
+        elif self.screen == "create":
+            pyglet.text.Label("Create New World", font_name="Minecraft", bold=True,
+                font_size=max(18, int(h * 0.04)), x=cx, y=h * 0.62,
+                anchor_x="center", anchor_y="center", color=(255, 255, 255, 255)).draw()
+            pyglet.text.Label("World name: " + self.world_name, font_name="Minecraft",
+                font_size=max(12, int(h * 0.025)), x=cx, y=h * 0.52,
+                anchor_x="center", anchor_y="center", color=(255, 255, 255, 255)).draw()
+            self._draw_mc_button("Create World", "start_world", cx, h * 0.43, bw, bh)
+            self._draw_mc_button("Back", "worlds", cx, h * 0.43-bh-gap, bw, bh)
+
+        elif self.screen == "options":
+            pyglet.text.Label("Options", font_name="Minecraft", bold=True,
+                font_size=max(18, int(h * 0.04)), x=cx, y=h * 0.66,
+                anchor_x="center", anchor_y="center", color=(255, 255, 255, 255)).draw()
+            self._draw_mc_button("Mouse sensitivity: " + ("Low" if self.options["mouse_sensitivity"] < .0025 else "Normal" if self.options["mouse_sensitivity"] < .004 else "High"),
+                "sensitivity", cx, h * 0.53, bw, bh)
+            self._draw_mc_button("Invert mouse Y: " + ("On" if self.options["invert_y"] else "Off"),
+                "invert_y", cx, h * 0.53-bh-gap, bw, bh)
+            self._draw_mc_button("Show FPS: " + ("On" if self.options["show_fps"] else "Off"),
+                "show_fps", cx, h * 0.53-2*(bh+gap), bw, bh)
+            self._draw_mc_button("Back", "options_back", cx, h * 0.53-3*(bh+gap), bw, bh)
+
+        elif self.screen == "about":
+            pyglet.text.Label("Minecraft PE 0.6.1 Alpha", font_name="Minecraft", bold=True,
+                font_size=max(16, int(h * 0.035)), x=cx, y=h * 0.58,
+                anchor_x="center", anchor_y="center", color=(255, 255, 255, 255)).draw()
+            pyglet.text.Label("Original C++ reference implementation", font_name="Minecraft",
+                font_size=max(10, int(h * 0.022)), x=cx, y=h * 0.51,
+                anchor_x="center", anchor_y="center", color=(255, 255, 255, 255)).draw()
+            self._draw_mc_button("Back", "title", cx, h * 0.41, bw, bh)
+
+        elif self.screen == "pause":
+            pyglet.text.Label("Game menu", font_name="Minecraft", bold=True,
+                font_size=max(20, int(h * 0.045)), x=cx, y=h * 0.64,
+                anchor_x="center", anchor_y="center", color=(255, 255, 255, 255)).draw()
+            for i, (label, action) in enumerate([
+                ("Back to game", "resume"), ("Options", "pause_options"), ("Quit to title", "title")
+            ]):
+                self._draw_mc_button(label, action, cx, h * 0.52-i*(bh+gap), bw, bh)
+
         elif self.screen == "inventory":
-            pyglet.text.Label("Inventory",font_name="Arial",bold=True,
-                font_size=max(20,int(h*0.045)),x=cx,y=h*0.72,anchor_x="center",anchor_y="center").draw()
-            slot=min(48,max(28,int(min(w,h)*0.07)))
-            start_x=cx-4.5*slot
+            pyglet.text.Label("Inventory", font_name="Minecraft", bold=True,
+                font_size=max(20, int(h * 0.045)), x=cx, y=h * 0.72,
+                anchor_x="center", anchor_y="center", color=(255, 255, 255, 255)).draw()
+            slot = min(48, max(28, int(min(w, h) * 0.07)))
+            start_x = cx - 4.5 * slot
             for row in range(3):
                 for col in range(9):
-                    idx=9+row*9+col
-                    sx,sy=start_x+col*slot,h*0.50-row*slot
-                    shapes.Rectangle(sx,sy,slot-3,slot-3,color=(55,55,55)).draw()
-                    shapes.Rectangle(sx+2,sy+2,slot-7,slot-7,color=(115,115,115)).draw()
-                    stack=self.inventory.slots[idx]
-                    if stack:
-                        pyglet.text.Label(str(stack.item_id),font_name="Arial",font_size=10,
-                            x=sx+slot/2,y=sy+slot/2,anchor_x="center",anchor_y="center").draw()
-                        pyglet.text.Label(str(stack.count),font_name="Arial",font_size=9,
-                            x=sx+slot-6,y=sy+4,anchor_x="right",anchor_y="bottom").draw()
+                    idx = 9 + row * 9 + col
+                    sx, sy = start_x + col * slot, h * 0.50-row*slot
+                    self._draw_inventory_slot(sx, sy, slot, idx, False)
             for col in range(9):
-                sx,sy=start_x+col*slot,h*0.50-3*slot-10
-                shapes.Rectangle(sx,sy,slot-3,slot-3,
-                    color=(225,205,115) if col==self.inventory.selected_hotbar else (55,55,55)).draw()
-                shapes.Rectangle(sx+2,sy+2,slot-7,slot-7,color=(115,115,115)).draw()
-                stack=self.inventory.slots[col]
-                if stack:
-                    pyglet.text.Label(str(stack.item_id),font_name="Arial",font_size=10,
-                        x=sx+slot/2,y=sy+slot/2,anchor_x="center",anchor_y="center").draw()
-                    pyglet.text.Label(str(stack.count),font_name="Arial",font_size=9,
-                        x=sx+slot-6,y=sy+4,anchor_x="right",anchor_y="bottom").draw()
-            button("Close (E / Esc)","resume",cx,h*0.18,bw,bh)
+                sx, sy = start_x + col * slot, h * 0.50-3*slot-10
+                self._draw_inventory_slot(sx, sy, slot, col, col == self.inventory.selected_hotbar)
+            self._draw_mc_button("Close (E / Esc)", "resume", cx, h * 0.18, bw, bh)
+
+    def _draw_inventory_slot(self, x, y, slot, index, selected):
+        from pyglet import shapes
+        from pyglet.sprite import Sprite
+        frame = self.ui_images.get("gui/itemframe.png")
+        if frame is not None:
+            sprite = Sprite(frame, x=x, y=y)
+            sprite.scale_x = (slot - 3) / max(1, frame.width)
+            sprite.scale_y = (slot - 3) / max(1, frame.height)
+            sprite.draw()
+        else:
+            shapes.Rectangle(x, y, slot-3, slot-3,
+                color=(225,205,115) if selected else (55,55,55)).draw()
+        stack = self.inventory.slots[index]
+        if stack:
+            atlas = self.ui_images.get("gui/items.png")
+            pyglet.text.Label(str(stack.item_id), font_name="Minecraft", font_size=10,
+                x=x+slot/2, y=y+slot/2, anchor_x="center", anchor_y="center",
+                color=(255,255,255,255)).draw()
+            pyglet.text.Label(str(stack.count), font_name="Minecraft", font_size=9,
+                x=x+slot-6, y=y+4, anchor_x="right", anchor_y="bottom",
+                color=(255,255,255,255)).draw()
 
     def _activate_menu_button(self, action):
         if action in ("title","worlds","create","options","about"):
@@ -455,6 +542,7 @@ class PygletGame:
             self.rebuild_mesh()
 
     def on_mouse_motion(self, x, y, dx, dy):
+        self._mouse_x, self._mouse_y = x, y
         if not self.mouse_locked: return
         self.game.yaw += dx * self.options["mouse_sensitivity"]
         direction = -1 if self.options.get("invert_y") else 1
