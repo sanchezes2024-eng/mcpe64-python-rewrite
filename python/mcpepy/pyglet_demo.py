@@ -233,7 +233,7 @@ class PygletGame:
 
     def on_mouse_motion(self, x, y, dx, dy):
         if not self.mouse_locked: return
-        self.game.yaw -= dx * 0.0025
+        self.game.yaw += dx * 0.0025
         self.game.pitch = max(-1.5533, min(1.5533, self.game.pitch + dy*0.0025))
 
     def on_key_press(self, symbol, modifiers):
