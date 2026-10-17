@@ -151,5 +151,32 @@ class RegionFile:
             stream.write(struct.pack("<1024I", *self.offsets))
         self.sector_free[0] = False
 
+    def iter_chunks(self):
+        """Yield (chunk_x, chunk_z, raw_payload) for all valid stored chunks."""
+        if not self._opened:
+            self.open()
+        for z in range(SECTOR_COLS):
+            for x in range(SECTOR_COLS):
+                if self.offsets[x + z * SECTOR_COLS]:
+                    payload = self.read_chunk(x, z)
+                    if payload is not None:
+                        yield x, z, payload
+
+    def load_into_world(self, world) -> int:
+        """Copy native block arrays into a compatible 16x128x16 World.
+
+        Returns the number of chunks loaded. Light and metadata arrays are
+        parsed and validated, but the current World model stores only block IDs.
+        """
+        if (world.chunk_width, world.chunk_height, world.chunk_depth) != (16, 128, 16):
+            raise ValueError("native MCPE chunks require 16x128x16 world chunks")
+        loaded = 0
+        for x, z, payload in self.iter_chunks():
+            native = decode_chunk_payload(payload)
+            chunk = world.get_chunk(x, z, create=True)
+            chunk.blocks[:] = native.blocks
+            loaded += 1
+        return loaded
+
     def close(self) -> None:
         self._opened = False
