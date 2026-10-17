@@ -27,8 +27,8 @@ class Game:
     last_triangles: int = field(init=False, default=0)
 
     def __post_init__(self):
-        self.world=World(16,32,16)
-        generate_terrain_chunk(self.world,0,0,seed=self.seed,base_height=3,amplitude=1)
+        self.world=World(16,128,16)
+        generate_terrain_chunk(self.world,0,0,seed=self.seed,base_height=8,amplitude=2)
         self.renderer=SoftwareRenderer(self.width,self.height,near=.08,far=64)
         self._sync_camera()
 
