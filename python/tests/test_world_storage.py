@@ -21,12 +21,12 @@ class NativeWorldStorageTests(unittest.TestCase):
         loaded = read_level_dat(self.root / world.id)
         self.assertIsNotNone(loaded)
         version, data = loaded
-        self.assertEqual(version, 2)
+        self.assertEqual(version, 3)
         self.assertEqual(data["RandomSeed"], 12345)
         self.assertEqual(data["GameType"], 0)
         self.assertEqual(data["LevelName"], "Test World")
         self.assertEqual(data["SpawnY"], 64)
-        self.assertEqual(data["StorageVersion"], 2)
+        self.assertEqual(data["StorageVersion"], 3)
         self.assertEqual(data["Platform"], 2)
 
     def test_world_list_ignores_folders_without_level_data(self):
