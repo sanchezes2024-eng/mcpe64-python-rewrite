@@ -192,9 +192,9 @@ def write_level_dat(directory: Path, *, seed: int, game_type: int, name: str) ->
         _string_tag("LevelName", name),
         _int_tag("StorageVersion", 3),
         _int_tag("Platform", 2),
-        b"\\x00",
+        b"\x00",
     ))
-    root_tag = b"\\x0a\\x00\\x00" + body
+    root_tag = b"\x0a\x00\x00" + body
     payload = struct.pack("<ii", 3, len(root_tag)) + root_tag
     target = directory / "level.dat"
     temp = directory / "level.dat_new"
