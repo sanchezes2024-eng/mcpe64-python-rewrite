@@ -11,10 +11,14 @@ from mcpepy.settings import DEFAULT_OPTIONS, load_options, save_options
 class SettingsTests(unittest.TestCase):
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
+        self.old_config_dir = os.environ.get("MCPEPY_CONFIG_DIR")
         os.environ["MCPEPY_CONFIG_DIR"] = self.tempdir.name
 
     def tearDown(self):
-        os.environ.pop("MCPEPY_CONFIG_DIR", None)
+        if self.old_config_dir is None:
+            os.environ.pop("MCPEPY_CONFIG_DIR", None)
+        else:
+            os.environ["MCPEPY_CONFIG_DIR"] = self.old_config_dir
         self.tempdir.cleanup()
 
     def test_missing_file_uses_defaults(self):
