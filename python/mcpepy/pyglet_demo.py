@@ -33,7 +33,8 @@ except ImportError as exc:
 from .game import Game
 from .chunkmesh import build_world_mesh
 from .panda3d_bridge import TERRAIN_TILES, ASSET_ROOT
-from .voxel import AIR, DIRT
+from .voxel import AIR, GRASS, DIRT, STONE
+from .inventory import Inventory
 
 
 FACE_LIGHT = {
@@ -61,6 +62,11 @@ class PygletGame:
         self.menu_buttons = []
         self.world_name = "My World"
         self.options = {"mouse_sensitivity": 0.0025, "show_fps": False}
+        self.previous_screen = "title"
+        self.inventory = Inventory()
+        self.inventory.add(DIRT, 32)
+        self.inventory.add(GRASS, 32)
+        self.inventory.add(STONE, 32)
         self.window = pyglet.window.Window(
             width=960, height=600, caption="MCPE 0.6.1 Python — Pyglet",
             resizable=True, vsync=True,
@@ -179,9 +185,46 @@ class PygletGame:
         glLoadIdentity()
         gluPerspective(70.0, max(1, self.window.width)/max(1, self.window.height), 0.05, 96.0)
         glMatrixMode(GL_MODELVIEW)
+        self._draw_hud()
+
+    def _draw_hud(self):
+        from pyglet import shapes
+        from pyglet.gl import glOrtho
+        glDisable(GL_TEXTURE_2D)
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        glOrtho(0, self.window.width, 0, self.window.height, -1, 1)
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
+        slot = min(48, max(30, int(min(self.window.width, self.window.height) * 0.065)))
+        total = slot * 9
+        start_x = (self.window.width - total) / 2
+        y = 14
+        names = {GRASS: "G", DIRT: "D", STONE: "S"}
+        for i in range(9):
+            x = start_x + i * slot
+            selected = i == self.inventory.selected_hotbar
+            shapes.Rectangle(x, y, slot-2, slot-2,
+                color=(230, 220, 150) if selected else (25, 25, 25)).draw()
+            shapes.Rectangle(x+3, y+3, slot-8, slot-8, color=(105, 105, 105)).draw()
+            stack = self.inventory.slots[i]
+            if stack:
+                pyglet.text.Label(names.get(stack.item_id, str(stack.item_id)),
+                    font_name="Arial", bold=True, font_size=max(10, slot*0.32),
+                    x=x+slot/2, y=y+slot*0.58, anchor_x="center", anchor_y="center",
+                    color=(255,255,255,255)).draw()
+                pyglet.text.Label(str(stack.count), font_name="Arial", font_size=10,
+                    x=x+slot-6, y=y+4, anchor_x="right", anchor_y="bottom",
+                    color=(255,255,255,255)).draw()
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        gluPerspective(70.0, max(1, self.window.width)/max(1, self.window.height), 0.05, 96.0)
+        glMatrixMode(GL_MODELVIEW)
 
     def update(self, dt):
         dt = min(max(float(dt), 0.0), 0.05)
+        if self.screen != "playing":
+            return
         pressed = set()
         for symbol, name in ((key.W, "w"), (key.A, "a"), (key.S, "s"),
                              (key.D, "d"), (key.SPACE, "space"), (key.LSHIFT, "shift")):
