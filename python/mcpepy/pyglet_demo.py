@@ -317,10 +317,56 @@ class PygletGame:
             pyglet.text.Label("Python recreation based on the original C++ source",font_name="Arial",
                 font_size=max(10,int(h*0.022)),x=cx,y=h*0.51,anchor_x="center",anchor_y="center").draw()
             button("Back","title",cx,h*0.41,bw,bh)
+        elif self.screen == "pause":
+            pyglet.text.Label("Game menu",font_name="Arial",bold=True,
+                font_size=max(20,int(h*0.045)),x=cx,y=h*0.64,anchor_x="center",anchor_y="center").draw()
+            for i,(label,action) in enumerate([
+                ("Back to game","resume"),("Options","pause_options"),("Quit to title","title")
+            ]):
+                button(label,action,cx,h*0.52-i*(bh+gap),bw,bh)
+        elif self.screen == "inventory":
+            pyglet.text.Label("Inventory",font_name="Arial",bold=True,
+                font_size=max(20,int(h*0.045)),x=cx,y=h*0.72,anchor_x="center",anchor_y="center").draw()
+            slot=min(48,max(28,int(min(w,h)*0.07)))
+            start_x=cx-4.5*slot
+            for row in range(3):
+                for col in range(9):
+                    idx=9+row*9+col
+                    sx,sy=start_x+col*slot,h*0.50-row*slot
+                    shapes.Rectangle(sx,sy,slot-3,slot-3,color=(55,55,55)).draw()
+                    shapes.Rectangle(sx+2,sy+2,slot-7,slot-7,color=(115,115,115)).draw()
+                    stack=self.inventory.slots[idx]
+                    if stack:
+                        pyglet.text.Label(str(stack.item_id),font_name="Arial",font_size=10,
+                            x=sx+slot/2,y=sy+slot/2,anchor_x="center",anchor_y="center").draw()
+                        pyglet.text.Label(str(stack.count),font_name="Arial",font_size=9,
+                            x=sx+slot-6,y=sy+4,anchor_x="right",anchor_y="bottom").draw()
+            for col in range(9):
+                sx,sy=start_x+col*slot,h*0.50-3*slot-10
+                shapes.Rectangle(sx,sy,slot-3,slot-3,
+                    color=(225,205,115) if col==self.inventory.selected_hotbar else (55,55,55)).draw()
+                shapes.Rectangle(sx+2,sy+2,slot-7,slot-7,color=(115,115,115)).draw()
+                stack=self.inventory.slots[col]
+                if stack:
+                    pyglet.text.Label(str(stack.item_id),font_name="Arial",font_size=10,
+                        x=sx+slot/2,y=sy+slot/2,anchor_x="center",anchor_y="center").draw()
+                    pyglet.text.Label(str(stack.count),font_name="Arial",font_size=9,
+                        x=sx+slot-6,y=sy+4,anchor_x="right",anchor_y="bottom").draw()
+            button("Close (E / Esc)","resume",cx,h*0.18,bw,bh)
 
     def _activate_menu_button(self, action):
         if action in ("title","worlds","create","options","about"):
+            if action == "title":
+                self.mouse_locked = False
+                self.window.set_exclusive_mouse(False)
             self.screen = action
+        elif action == "pause_options":
+            self.previous_screen = "pause"
+            self.screen = "options"
+        elif action == "resume":
+            self.screen = "playing"
+            self.mouse_locked = True
+            self.window.set_exclusive_mouse(True)
         elif action == "create_world":
             self.screen = "create"
         elif action == "sensitivity":
@@ -336,6 +382,15 @@ class PygletGame:
     def on_mouse_press(self, x, y, button, modifiers):
         if self.screen != "playing":
             if button == mouse.LEFT:
+                if self.screen == "inventory":
+                    slot=min(48,max(28,int(min(self.window.width,self.window.height)*0.07)))
+                    start_x=self.window.width/2-4.5*slot
+                    hotbar_y=self.window.height*0.50-3*slot-10
+                    if hotbar_y <= y <= hotbar_y+slot:
+                        col=int((x-start_x)//slot)
+                        if 0 <= col < 9:
+                            self.inventory.select_hotbar(col)
+                            return
                 for x0,y0,x1,y1,action in reversed(self.menu_buttons):
                     if x0<=x<=x1 and y0<=y<=y1:
                         self._activate_menu_button(action)
@@ -349,17 +404,23 @@ class PygletGame:
         if target is None: return
         (bx,by,bz), air = target
         if button == mouse.LEFT and 0 <= by < self.game.world.chunk_height:
-            self.game.world.set_block(bx, by, bz, AIR)
-            self.rebuild_mesh()
+            block_id=self.game.world.get_block(bx,by,bz)
+            if block_id != AIR:
+                self.inventory.add(block_id,1)
+                self.game.world.set_block(bx,by,bz,AIR)
+                self.rebuild_mesh()
         elif button == mouse.RIGHT and air is not None:
-            ax,ay,az = air
+            ax,ay,az=air
             if not 0 <= ay < self.game.world.chunk_height: return
-            player = self.game.player_bounds()
+            stack=self.inventory.selected
+            if stack is None: return
+            player=self.game.player_bounds()
             if (player.min_x < ax+1 and player.max_x > ax and
                 player.min_y < ay+1 and player.max_y > ay and
                 player.min_z < az+1 and player.max_z > az):
                 return
-            self.game.world.set_block(ax, ay, az, DIRT)
+            self.game.world.set_block(ax,ay,az,stack.item_id)
+            self.inventory.consume_selected()
             self.rebuild_mesh()
 
     def on_mouse_motion(self, x, y, dx, dy):
@@ -372,11 +433,23 @@ class PygletGame:
             if self.screen == "playing":
                 self.mouse_locked = False
                 self.window.set_exclusive_mouse(False)
-                self.screen = "title"
+                self.screen = "pause"
+            elif self.screen in ("pause","inventory"):
+                self.screen = "playing"
+                self.mouse_locked = True
+                self.window.set_exclusive_mouse(True)
+            elif self.screen == "options" and self.previous_screen == "pause":
+                self.screen = "pause"
             elif self.screen != "title":
                 self.screen = "title"
             else:
                 self.window.close()
+        elif symbol == key.E and self.screen == "playing":
+            self.screen = "inventory"
+            self.mouse_locked = False
+            self.window.set_exclusive_mouse(False)
+        elif self.screen == "playing" and key._1 <= symbol <= key._9:
+            self.inventory.select_hotbar(symbol-key._1)
         elif symbol == key.SPACE and self.screen == "playing":
             self.game.jump()
         elif self.screen == "create" and symbol == key.BACKSPACE:
