@@ -37,6 +37,7 @@ from .voxel import AIR, GRASS, DIRT, STONE
 from .inventory import Inventory
 from .particles import ParticleEngine
 from .settings import load_options, save_options
+from .world_storage import create_world, list_worlds
 
 
 FACE_LIGHT = {
@@ -62,7 +63,7 @@ class PygletGame:
         self.game = Game()
         self.screen = "title"
         self.menu_buttons = []
-        self.world_name = "My World"
+        self.world_name = "My World"\n        self.worlds = list_worlds()\n        self.selected_world_id = self.worlds[0].id if self.worlds else None
         self.options = load_options()
         self.previous_screen = "title"
         self.inventory = Inventory()
@@ -380,11 +381,21 @@ class PygletGame:
 
         elif self.screen == "worlds":
             pyglet.text.Label("Select World", font_name="Minecraft", bold=True,
-                font_size=max(18, int(h * 0.04)), x=cx, y=h * 0.62,
+                font_size=max(18, int(h * 0.04)), x=cx, y=h * 0.84,
                 anchor_x="center", anchor_y="center", color=(255, 255, 255, 255)).draw()
-            self._draw_mc_button(self.world_name, "start_world", cx, h * 0.49, bw, bh)
-            self._draw_mc_button("Create New World", "create_world", cx, h * 0.49-bh-gap, bw, bh)
-            self._draw_mc_button("Back", "title", cx, h * 0.49-2*(bh+gap), bw, bh)
+            self.worlds = list_worlds()
+            if self.worlds:
+                visible = self.worlds[:5]
+                for i, world in enumerate(visible):
+                    label = world.name + ("  [Creative]" if world.game_type == 1 else "  [Survival]")
+                    self._draw_mc_button(label, "load_world:" + world.id, cx,
+                        h * 0.70 - i * (bh + gap), bw, bh)
+            else:
+                pyglet.text.Label("No saved worlds", font_name="Minecraft", font_size=12,
+                    x=cx, y=h * 0.61, anchor_x="center", color=(220,220,220,255)).draw()
+            bottom = max(h * 0.20, h * 0.70 - min(5, len(self.worlds)) * (bh + gap))
+            self._draw_mc_button("Create New World", "create_world", cx, bottom, bw, bh)
+            self._draw_mc_button("Back", "title", cx, bottom - bh - gap, bw, bh)
 
         elif self.screen == "create":
             pyglet.text.Label("Create New World", font_name="Minecraft", bold=True,
@@ -503,7 +514,19 @@ class PygletGame:
             save_options(self.options)
         elif action == "options_back":
             self.screen = self.previous_screen if self.previous_screen in ("pause", "title") else "title"
+        elif action.startswith("load_world:"):
+            self.selected_world_id = action.split(":", 1)[1]
+            # The native level.dat summary is selected here. Native chunks.dat
+            # decoding is a separate unfinished subsystem, so do not imply that
+            # the current prototype renderer has loaded this world's terrain.
+            self.world_name = next((w.name for w in list_worlds()
+                if w.id == self.selected_world_id), self.selected_world_id)
+            self.screen = "world_selected"
         elif action == "start_world":
+            if self.screen == "create":
+                summary = create_world(self.world_name, self.game.seed, 0)
+                self.selected_world_id = summary.id
+                self.worlds = list_worlds()
             self.screen = "playing"
             self.mouse_locked = True
             self.window.set_exclusive_mouse(True)
@@ -588,6 +611,9 @@ class PygletGame:
         elif self.screen == "create" and symbol == key.BACKSPACE:
             self.world_name = self.world_name[:-1]
         elif self.screen == "create" and symbol == key.ENTER:
+            summary = create_world(self.world_name, self.game.seed, 0)
+            self.selected_world_id = summary.id
+            self.worlds = list_worlds()
             self.screen = "playing"
             self.mouse_locked = True
             self.window.set_exclusive_mouse(True)
