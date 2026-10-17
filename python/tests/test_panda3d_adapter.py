@@ -55,8 +55,9 @@ class Panda3DAdapterTests(unittest.TestCase):
 
     def test_atlas_uvs_stay_inside_selected_tile(self):
         u, v = Panda3DRenderBridge._atlas_uv(1, "top", (0.5, 0.5))
-        self.assertGreater(u, 0 / 16)
-        self.assertLess(u, 1 / 16)
+        # Block ID 1 is stone, texture index 1 in the top atlas row.
+        self.assertGreater(u, 1 / 16)
+        self.assertLess(u, 2 / 16)
         self.assertGreater(v, 15 / 16)
         self.assertLess(v, 1.0)
 
