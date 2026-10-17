@@ -71,7 +71,7 @@ class PygletGame:
         self._load_texture()
         self.rebuild_mesh()
         self.window.push_handlers(self)
-        pyglet.clock.schedule(self.update, 1.0 / 60.0)
+        pyglet.clock.schedule_interval(self.update, 1.0 / 60.0)
         glEnable(GL_DEPTH_TEST)
         glDepthFunc(GL_LEQUAL)
         glClearDepth(1.0)
