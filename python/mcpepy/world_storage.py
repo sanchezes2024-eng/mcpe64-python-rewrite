@@ -9,7 +9,6 @@ load native chunks.dat yet.
 from __future__ import annotations
 
 import os
-import re
 import struct
 import time
 from dataclasses import dataclass
@@ -191,12 +190,12 @@ def write_level_dat(directory: Path, *, seed: int, game_type: int, name: str) ->
         _long_tag("SizeOnDisk", 0),
         _long_tag("LastPlayed", now),
         _string_tag("LevelName", name),
-        _int_tag("StorageVersion", 2),
+        _int_tag("StorageVersion", 3),
         _int_tag("Platform", 2),
         b"\\x00",
     ))
     root_tag = b"\\x0a\\x00\\x00" + body
-    payload = struct.pack("<ii", 2, len(root_tag)) + root_tag
+    payload = struct.pack("<ii", 3, len(root_tag)) + root_tag
     target = directory / "level.dat"
     temp = directory / "level.dat_new"
     backup = directory / "level.dat_old"
