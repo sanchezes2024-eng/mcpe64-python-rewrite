@@ -368,9 +368,11 @@ class PygletGame:
         if self.screen == "title":
             self._draw_title_art()
             for i, (label, action) in enumerate([
-                ("Play", "worlds"), ("Options", "options"), ("About", "about")
+                ("Start Game", "worlds"), ("Join Game", "join"), ("Options", "options")
             ]):
-                self._draw_mc_button(label, action, cx, h * 0.55 - i * (bh + gap), bw, bh)
+                # StartMenuScreen.cpp has centered Start Game, Join Game, and Options buttons.
+                self._draw_mc_button(label, action, cx, h * 0.55 - i * (bh + gap),
+                    min(bw, 160 * max(1.0, h / 600.0)), max(24, 24 * max(1.0, h / 600.0)))
             pyglet.text.Label("v0.6.1 alpha", font_name="Minecraft", font_size=10,
                 x=(w / 2), y=62, anchor_x="center", color=(204, 204, 204, 255)).draw()
             pyglet.text.Label("© Mojang AB", font_name="Minecraft", font_size=9,
@@ -405,6 +407,15 @@ class PygletGame:
             self._draw_mc_button("Show FPS: " + ("On" if self.options["show_fps"] else "Off"),
                 "show_fps", cx, h * 0.53-2*(bh+gap), bw, bh)
             self._draw_mc_button("Back", "options_back", cx, h * 0.53-3*(bh+gap), bw, bh)
+
+        elif self.screen == "join":
+            pyglet.text.Label("Join Game", font_name="Minecraft", bold=True,
+                font_size=max(18, int(h * 0.04)), x=cx, y=h * 0.62,
+                anchor_x="center", anchor_y="center", color=(255,255,255,255)).draw()
+            pyglet.text.Label("Multiplayer networking is not yet ported from the C++ client.",
+                font_name="Minecraft", font_size=max(10, int(h * 0.022)), x=cx, y=h * 0.52,
+                anchor_x="center", anchor_y="center", color=(255,255,255,255)).draw()
+            self._draw_mc_button("Back", "title", cx, h * 0.41, bw, bh)
 
         elif self.screen == "about":
             pyglet.text.Label("Minecraft PE 0.6.1 Alpha", font_name="Minecraft", bold=True,
@@ -475,6 +486,8 @@ class PygletGame:
             self.screen = "playing"
             self.mouse_locked = True
             self.window.set_exclusive_mouse(True)
+        elif action == "join":
+            self.screen = "join"
         elif action == "create_world":
             self.screen = "create"
         elif action == "sensitivity":
